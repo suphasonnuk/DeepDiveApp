@@ -85,12 +85,30 @@ pnpm db:push
 
 ## Step 5: Deploy to Cloud Run (3 minutes)
 
+**Option A: Use deployment script (easiest)**
+
+```bash
+# Linux/Mac
+cd /home/user/DeepDiveApp
+./deploy.sh YOUR_PROJECT_ID
+```
+
+```powershell
+# Windows PowerShell
+cd C:\Users\YourUsername\DeepDiveApp
+.\deploy.ps1 YOUR_PROJECT_ID
+```
+
+**Option B: Cloud Build**
+
 ```bash
 cd /home/user/DeepDiveApp
 gcloud builds submit --config=cloudbuild.yaml
 ```
 
-**Wait for build to complete (~3 minutes)**
+**Wait for build to complete (~5-10 minutes)**
+
+**Having issues?** See [DEPLOY_TROUBLESHOOTING.md](DEPLOY_TROUBLESHOOTING.md)
 
 ---
 

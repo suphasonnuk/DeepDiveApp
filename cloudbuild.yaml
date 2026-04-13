@@ -9,6 +9,7 @@ steps:
       '-t', 'gcr.io/$PROJECT_ID/deepdive-web:latest',
       '.'
     ]
+    timeout: '1800s'  # 30 minutes for build
 
   # Push the image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -28,17 +29,21 @@ steps:
       - '--region=us-central1'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,MORALIS_API_KEY=MORALIS_API_KEY:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest,ETHERSCAN_API_KEY=ETHERSCAN_API_KEY:latest,ARBISCAN_API_KEY=ARBISCAN_API_KEY:latest,BASESCAN_API_KEY=BASESCAN_API_KEY:latest,POLYGONSCAN_API_KEY=POLYGONSCAN_API_KEY:latest,NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=WALLETCONNECT_PROJECT_ID:latest,QUANT_ENGINE_URL=QUANT_ENGINE_URL:latest'
-      - '--memory=1Gi'
-      - '--cpu=1'
+      - '--set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,MORALIS_API_KEY=MORALIS_API_KEY:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest'
+      - '--memory=2Gi'
+      - '--cpu=2'
       - '--timeout=300'
       - '--max-instances=10'
       - '--min-instances=0'
+      - '--port=8080'
 
 images:
   - 'gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA'
   - 'gcr.io/$PROJECT_ID/deepdive-web:latest'
 
+timeout: '3600s'  # 1 hour total timeout
+
 options:
-  machineType: 'N1_HIGHCPU_8'
+  machineType: 'E2_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
+  diskSizeGb: 100

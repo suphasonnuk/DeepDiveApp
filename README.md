@@ -3,7 +3,23 @@
 Track profitable wallet addresses on-chain and replicate their trades with your approval.
 
 **🚀 Cloud Run Ready** — Deploy to GCP in 15 minutes.  
-📖 [QUICKSTART.md](QUICKSTART.md) | 📚 [Full Deployment Guide](DEPLOYMENT.md)
+📖 [QUICKSTART.md](QUICKSTART.md) | 📚 [Full Deployment Guide](DEPLOYMENT.md) | 🔧 [Troubleshooting](DEPLOY_TROUBLESHOOTING.md)
+
+## Quick Deploy
+
+**Option 1: Automated Script**
+```bash
+# Linux/Mac
+./deploy.sh YOUR_PROJECT_ID
+
+# Windows PowerShell
+.\deploy.ps1 YOUR_PROJECT_ID
+```
+
+**Option 2: Cloud Build**
+```bash
+gcloud builds submit --config=cloudbuild.yaml
+```
 
 ## What's Built
 
