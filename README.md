@@ -2,6 +2,9 @@
 
 Track profitable wallet addresses on-chain and replicate their trades with your approval.
 
+**🚀 Cloud Run Ready** — Deploy to GCP in 15 minutes.  
+📖 [QUICKSTART.md](QUICKSTART.md) | 📚 [Full Deployment Guide](DEPLOYMENT.md)
+
 ## What's Built
 
 ### ✅ Phase 1: Foundation (Complete)
