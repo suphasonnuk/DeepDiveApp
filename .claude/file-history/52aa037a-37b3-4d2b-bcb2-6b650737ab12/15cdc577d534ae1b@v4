@@ -1,0 +1,563 @@
+const pptxgen = require("pptxgenjs");
+const pres = new pptxgen();
+
+// Template: 13.33" x 7.5" (LAYOUT_WIDE) - matching CMG GCP Project Setup template
+pres.layout = "LAYOUT_WIDE";
+pres.author = "Deloitte Consulting";
+pres.title = "Average COGS Calculation - Old vs New Logic";
+
+const W = 13.33; // slide width
+const H = 7.5;   // slide height
+
+// Colors from template theme
+const C = {
+  black: "000000",
+  white: "FFFFFF",
+  darkBlue: "002776",
+  red: "FF0000",       // accent1 - used for separator lines
+  blue: "00A1DE",      // accent2
+  darkGray: "313131",  // accent3
+  green: "3C8A2E",     // accent4 - Deloitte green
+  medGray: "575757",   // accent5
+  lightGray: "8C8C8C", // accent6
+  bgGray: "F2F2F2",
+  lineGray: "D0D0CE",
+  amber: "ED8B00",
+};
+
+// Template layout constants
+const LEFT_MARGIN = 0.53;  // ~479424 EMU
+const CONTENT_W = 12.2;    // ~11160000 EMU
+const SECTION_Y = 0.36;
+const TITLE_Y = 0.75;
+const LINE_Y = 1.3;
+const BODY_Y = 1.5;
+const FOOTER_Y = 7.06;
+
+// Helper: Add content slide chrome (header line, footer, confidential, page number)
+function addSlideChrome(slide, sectionText, titleText, pageNum) {
+  // Section tag (small caps style)
+  slide.addText(sectionText, {
+    x: LEFT_MARGIN, y: SECTION_Y, w: CONTENT_W, h: 0.2,
+    fontSize: 9, fontFace: "Calibri", color: C.medGray, charSpacing: 1.5, margin: 0,
+  });
+
+  // Title
+  slide.addText(titleText, {
+    x: LEFT_MARGIN, y: TITLE_Y, w: CONTENT_W, h: 0.45,
+    fontSize: 22, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+  });
+
+  // Red separator line (accent1 from template)
+  slide.addShape(pres.shapes.LINE, {
+    x: LEFT_MARGIN, y: LINE_Y, w: CONTENT_W, h: 0,
+    line: { color: C.red, width: 3 },
+  });
+
+  // Footer left - document name
+  slide.addText("CMG Unified Data Platform - Average COGS Calculation Old vs New", {
+    x: 5.5, y: FOOTER_Y, w: 5.5, h: 0.25,
+    fontSize: 7, fontFace: "Calibri", color: C.lightGray, align: "right", margin: 0,
+  });
+
+  // Footer right - page number + copyright
+  slide.addText(`${pageNum} | Copyright \u00A9 2025 Deloitte T&T (Thailand) Co., Ltd.`, {
+    x: LEFT_MARGIN, y: FOOTER_Y, w: 5, h: 0.25,
+    fontSize: 7, fontFace: "Calibri", color: C.lightGray, align: "left", margin: 0,
+  });
+
+  // Confidential label top-right
+  slide.addText("Confidential", {
+    x: 11.7, y: 0.1, w: 1.0, h: 0.2,
+    fontSize: 8, fontFace: "Calibri", color: C.lightGray, align: "right", margin: 0,
+  });
+}
+
+// ============================================================
+// SLIDE 1: Title Slide (matches template Layout 1 - with background image style)
+// ============================================================
+let s1 = pres.addSlide();
+s1.background = { color: C.white };
+
+// Title area background box (semi-transparent white overlay area like template)
+s1.addShape(pres.shapes.RECTANGLE, {
+  x: 0, y: 3.2, w: W, h: 4.3,
+  fill: { color: C.white, transparency: 10 },
+});
+
+// Section tag (small caps)
+s1.addText("AVERAGE COGS CALCULATION", {
+  x: 1.0, y: 3.5, w: 6.5, h: 0.25,
+  fontSize: 12, fontFace: "Calibri", color: C.black, charSpacing: 1.5, margin: 0,
+});
+
+// Green separator line
+s1.addShape(pres.shapes.LINE, {
+  x: 1.0, y: 3.85, w: 6.5, h: 0,
+  line: { color: C.green, width: 3 },
+});
+
+// Main title
+s1.addText("Old vs New Requirement Logic", {
+  x: 1.0, y: 3.8, w: 8.0, h: 1.0,
+  fontSize: 44, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+
+// Subtitle
+s1.addText("Unified Data Platform", {
+  x: 1.0, y: 4.8, w: 6.5, h: 0.4,
+  fontSize: 18, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+
+// Date
+s1.addText("CMG Stock Aging FRS  |  Functional Requirement Change", {
+  x: 1.0, y: 5.6, w: 6.5, h: 0.3,
+  fontSize: 18, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+
+// Confidential
+s1.addText("Confidential", {
+  x: 11.7, y: 0.1, w: 1.0, h: 0.2,
+  fontSize: 8, fontFace: "Calibri", color: C.lightGray, align: "right", margin: 0,
+});
+
+// ============================================================
+// SLIDE 2: Agenda
+// ============================================================
+let s2 = pres.addSlide();
+s2.background = { color: C.white };
+addSlideChrome(s2, "AVERAGE COGS CALCULATION", "Agenda", 2);
+
+const agendaItems = [
+  { num: "01", title: "Current FRS Logic (Old)", desc: "12-month lookback with span-based denominator" },
+  { num: "02", title: "New Requirement Logic", desc: "Historical lookback with instant 12-month denominator" },
+  { num: "03", title: "Side-by-Side Comparison", desc: "Same SKU scenarios under both calculation methods" },
+  { num: "04", title: "Impact on Seasonal SKUs", desc: "How the change affects seasonal and existing articles" },
+];
+
+agendaItems.forEach((item, i) => {
+  const yPos = BODY_Y + 0.3 + i * 1.15;
+  // Number box
+  s2.addShape(pres.shapes.RECTANGLE, {
+    x: LEFT_MARGIN, y: yPos, w: 0.6, h: 0.6,
+    fill: { color: C.darkBlue },
+  });
+  s2.addText(item.num, {
+    x: LEFT_MARGIN, y: yPos, w: 0.6, h: 0.6,
+    fontSize: 18, fontFace: "Calibri", color: C.white, align: "center", valign: "middle", bold: true, margin: 0,
+  });
+  s2.addText(item.title, {
+    x: 1.4, y: yPos, w: 10, h: 0.32,
+    fontSize: 18, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+  });
+  s2.addText(item.desc, {
+    x: 1.4, y: yPos + 0.32, w: 10, h: 0.28,
+    fontSize: 13, fontFace: "Calibri", color: C.medGray, margin: 0,
+  });
+  // Subtle bottom border
+  if (i < agendaItems.length - 1) {
+    s2.addShape(pres.shapes.LINE, {
+      x: LEFT_MARGIN, y: yPos + 0.9, w: 11.5, h: 0,
+      line: { color: C.lineGray, width: 0.5 },
+    });
+  }
+});
+
+// ============================================================
+// SLIDE 3: Old Logic - Overview
+// ============================================================
+let s3 = pres.addSlide();
+s3.background = { color: C.white };
+addSlideChrome(s3, "CURRENT FRS", "Old Logic: 12-Month Lookback Window", 3);
+
+// Formula box
+s3.addShape(pres.shapes.RECTANGLE, {
+  x: LEFT_MARGIN, y: BODY_Y + 0.2, w: CONTENT_W, h: 0.65,
+  fill: { color: C.darkBlue },
+});
+s3.addText("Average COGS  =  Sum of COGS across N months  /  N months", {
+  x: LEFT_MARGIN, y: BODY_Y + 0.2, w: CONTENT_W, h: 0.65,
+  fontSize: 18, fontFace: "Consolas", color: C.white, align: "center", valign: "middle", margin: 0,
+});
+
+// Two cards side by side
+const cardY = BODY_Y + 1.1;
+const cardH = 3.5;
+const cardW = 5.8;
+
+// Card 1: Lookback Window
+s3.addShape(pres.shapes.RECTANGLE, {
+  x: LEFT_MARGIN, y: cardY, w: cardW, h: cardH,
+  fill: { color: C.bgGray },
+});
+s3.addShape(pres.shapes.RECTANGLE, {
+  x: LEFT_MARGIN, y: cardY, w: cardW, h: 0.05,
+  fill: { color: C.darkBlue },
+});
+s3.addText("Lookback Window", {
+  x: LEFT_MARGIN + 0.3, y: cardY + 0.2, w: cardW - 0.6, h: 0.35,
+  fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s3.addText([
+  { text: "Only looks at the past 12 months from the report date", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "Example: Oct 2025 report looks at Nov 2024 - Oct 2025", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "No visibility into data before the 12-month window", options: { bullet: true, fontSize: 13, color: C.darkGray } },
+], { x: LEFT_MARGIN + 0.3, y: cardY + 0.65, w: cardW - 0.6, h: 2.5, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// Card 2: Denominator
+s3.addShape(pres.shapes.RECTANGLE, {
+  x: LEFT_MARGIN + cardW + 0.6, y: cardY, w: cardW, h: cardH,
+  fill: { color: C.bgGray },
+});
+s3.addShape(pres.shapes.RECTANGLE, {
+  x: LEFT_MARGIN + cardW + 0.6, y: cardY, w: cardW, h: 0.05,
+  fill: { color: C.amber },
+});
+s3.addText("Denominator (N)", {
+  x: LEFT_MARGIN + cardW + 0.9, y: cardY + 0.2, w: cardW - 0.6, h: 0.35,
+  fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s3.addText([
+  { text: "N = Span from 1st transaction in window to current month", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "First data at Month 5 within window, N = 8 (not 12)", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "Does NOT distinguish new vs old SKUs", options: { bullet: true, fontSize: 13, color: C.red, bold: true } },
+], { x: LEFT_MARGIN + cardW + 0.9, y: cardY + 0.65, w: cardW - 0.6, h: 2.5, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// ============================================================
+// SLIDE 4: Old Logic - Example Table
+// ============================================================
+let s4 = pres.addSlide();
+s4.background = { color: C.white };
+addSlideChrome(s4, "CURRENT FRS", "Old Logic: Example Scenarios", 4);
+
+const hdrOpts = { fill: { color: C.darkBlue }, color: C.white, bold: true, fontSize: 9, fontFace: "Calibri", align: "center", valign: "middle" };
+const cellOpts = { fontSize: 9, fontFace: "Calibri", align: "center", valign: "middle", color: C.darkGray };
+const emptyCell = { text: "-", options: { ...cellOpts, color: C.lineGray } };
+const resultOpts = { fontSize: 9, fontFace: "Calibri", align: "center", valign: "middle", color: C.black, bold: true };
+
+const oldTableData = [
+  [
+    { text: "SKU", options: hdrOpts },
+    { text: "M1", options: hdrOpts }, { text: "M2", options: hdrOpts }, { text: "M3", options: hdrOpts },
+    { text: "M4", options: hdrOpts }, { text: "M5", options: hdrOpts }, { text: "M6", options: hdrOpts },
+    { text: "M7", options: hdrOpts }, { text: "M8", options: hdrOpts }, { text: "M9", options: hdrOpts },
+    { text: "M10", options: hdrOpts }, { text: "M11", options: hdrOpts }, { text: "M12", options: hdrOpts },
+    { text: "# Months\n(Span)", options: { ...hdrOpts, fill: { color: C.amber } } },
+    { text: "Total", options: hdrOpts },
+    { text: "Avg COGS", options: { ...hdrOpts, fill: { color: C.green } } },
+  ],
+  [
+    { text: "SKU A\n(Existing)", options: { ...cellOpts, bold: true } },
+    { text: "10", options: cellOpts }, { text: "20", options: cellOpts }, { text: "30", options: cellOpts },
+    { text: "40", options: cellOpts }, { text: "50", options: cellOpts }, { text: "60", options: cellOpts },
+    { text: "70", options: cellOpts }, { text: "80", options: cellOpts }, { text: "90", options: cellOpts },
+    { text: "100", options: cellOpts }, { text: "110", options: cellOpts }, { text: "120", options: cellOpts },
+    { text: "12", options: { ...resultOpts, color: C.amber } },
+    { text: "780", options: resultOpts },
+    { text: "65.00", options: { ...resultOpts, color: C.green } },
+  ],
+  [
+    { text: "SKU B\n(Seasonal)", options: { ...cellOpts, bold: true } },
+    emptyCell, emptyCell, emptyCell, emptyCell, emptyCell, emptyCell,
+    { text: "80", options: cellOpts }, { text: "90", options: cellOpts }, { text: "85", options: cellOpts },
+    emptyCell, emptyCell, emptyCell,
+    { text: "6", options: { ...resultOpts, color: C.red } },
+    { text: "255", options: resultOpts },
+    { text: "42.50", options: { ...resultOpts, color: C.red } },
+  ],
+  [
+    { text: "SKU C\n(New)", options: { ...cellOpts, bold: true } },
+    emptyCell, emptyCell, emptyCell, emptyCell, emptyCell, emptyCell, emptyCell,
+    { text: "40", options: cellOpts }, { text: "50", options: cellOpts },
+    { text: "60", options: cellOpts }, { text: "70", options: cellOpts }, { text: "55", options: cellOpts },
+    { text: "5", options: { ...resultOpts, color: C.amber } },
+    { text: "275", options: resultOpts },
+    { text: "55.00", options: { ...resultOpts, color: C.green } },
+  ],
+];
+
+s4.addTable(oldTableData, {
+  x: LEFT_MARGIN, y: BODY_Y + 0.2, w: CONTENT_W,
+  colW: [1.1, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 1.05, 0.85, 1.0],
+  rowH: [0.45, 0.5, 0.5, 0.5],
+  border: { pt: 0.5, color: C.lineGray },
+});
+
+// Callout box
+const callY = BODY_Y + 2.5;
+s4.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: callY, w: CONTENT_W, h: 1.8, fill: { color: C.bgGray } });
+s4.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: callY, w: 0.06, h: 1.8, fill: { color: C.amber } });
+s4.addText("Key Observation", { x: LEFT_MARGIN + 0.3, y: callY + 0.1, w: 11.5, h: 0.3, fontSize: 15, fontFace: "Calibri", color: C.black, bold: true, margin: 0 });
+s4.addText([
+  { text: "SKU B (Seasonal): ", options: { bold: true, fontSize: 12, color: C.black } },
+  { text: "Has sales only in Q3 (M7-M9). First data at M7, so span = 6 months.", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "Denominator = 6 (not 12), resulting in a ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "higher average (42.50) ", options: { fontSize: 12, color: C.red, bold: true } },
+  { text: "than if divided by 12 (21.25).", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "The old logic cannot tell if this SKU is seasonal or truly new.", options: { fontSize: 12, color: C.red, bold: true, italic: true } },
+], { x: LEFT_MARGIN + 0.3, y: callY + 0.45, w: 11.5, h: 1.2, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// ============================================================
+// SLIDE 5: New Logic - Overview
+// ============================================================
+let s5 = pres.addSlide();
+s5.background = { color: C.white };
+addSlideChrome(s5, "NEW REQUIREMENT", "New Logic: Historical Lookback", 5);
+
+// Formula box
+s5.addShape(pres.shapes.RECTANGLE, {
+  x: LEFT_MARGIN, y: BODY_Y + 0.2, w: CONTENT_W, h: 0.65,
+  fill: { color: C.darkBlue },
+});
+s5.addText("Average COGS  =  Sum of COGS (last 12 months)  /  N months", {
+  x: LEFT_MARGIN, y: BODY_Y + 0.2, w: CONTENT_W, h: 0.65,
+  fontSize: 18, fontFace: "Consolas", color: C.white, align: "center", valign: "middle", margin: 0,
+});
+
+const card5Y = BODY_Y + 1.1;
+
+// Card 1: Existing SKU
+s5.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: card5Y, w: cardW, h: cardH, fill: { color: C.bgGray } });
+s5.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: card5Y, w: cardW, h: 0.05, fill: { color: C.green } });
+s5.addText("Existing SKU (has data before window)", { x: LEFT_MARGIN + 0.3, y: card5Y + 0.2, w: cardW - 0.6, h: 0.35, fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0 });
+s5.addText([
+  { text: "Look back to the start of ALL data (e.g., 2018)", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "If ANY transaction exists before the 12-month window", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "N = 12 instantly", options: { bullet: true, breakLine: true, fontSize: 18, color: C.green, bold: true } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "Even if only 3 months have COGS in the window", options: { bullet: true, fontSize: 13, color: C.darkGray } },
+], { x: LEFT_MARGIN + 0.3, y: card5Y + 0.65, w: cardW - 0.6, h: 2.5, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// Card 2: New SKU
+s5.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN + cardW + 0.6, y: card5Y, w: cardW, h: cardH, fill: { color: C.bgGray } });
+s5.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN + cardW + 0.6, y: card5Y, w: cardW, h: 0.05, fill: { color: C.amber } });
+s5.addText("New SKU (created within 12 months)", { x: LEFT_MARGIN + cardW + 0.9, y: card5Y + 0.2, w: cardW - 0.6, h: 0.35, fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0 });
+s5.addText([
+  { text: "No historical data before the 12-month window", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "N = count of months with actual COGS values", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "Same as current FRS fallback", options: { bullet: true, breakLine: true, fontSize: 14, color: C.amber, bold: true } },
+  { text: "", options: { breakLine: true, fontSize: 8 } },
+  { text: "Prevents artificially low averages for new articles", options: { bullet: true, fontSize: 13, color: C.darkGray } },
+], { x: LEFT_MARGIN + cardW + 0.9, y: card5Y + 0.65, w: cardW - 0.6, h: 2.5, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// ============================================================
+// SLIDE 6: New Logic - Example Table
+// ============================================================
+let s6 = pres.addSlide();
+s6.background = { color: C.white };
+addSlideChrome(s6, "NEW REQUIREMENT", "New Logic: Same Scenarios, Different Results", 6);
+
+const newTableData = [
+  [
+    { text: "SKU", options: hdrOpts },
+    { text: "M1", options: hdrOpts }, { text: "M2", options: hdrOpts }, { text: "M3", options: hdrOpts },
+    { text: "M4", options: hdrOpts }, { text: "M5", options: hdrOpts }, { text: "M6", options: hdrOpts },
+    { text: "M7", options: hdrOpts }, { text: "M8", options: hdrOpts }, { text: "M9", options: hdrOpts },
+    { text: "M10", options: hdrOpts }, { text: "M11", options: hdrOpts }, { text: "M12", options: hdrOpts },
+    { text: "Has Hist.\nData?", options: { ...hdrOpts, fill: { color: C.blue } } },
+    { text: "N", options: { ...hdrOpts, fill: { color: C.amber } } },
+    { text: "Avg COGS", options: { ...hdrOpts, fill: { color: C.green } } },
+  ],
+  [
+    { text: "SKU A\n(Existing)", options: { ...cellOpts, bold: true } },
+    { text: "10", options: cellOpts }, { text: "20", options: cellOpts }, { text: "30", options: cellOpts },
+    { text: "40", options: cellOpts }, { text: "50", options: cellOpts }, { text: "60", options: cellOpts },
+    { text: "70", options: cellOpts }, { text: "80", options: cellOpts }, { text: "90", options: cellOpts },
+    { text: "100", options: cellOpts }, { text: "110", options: cellOpts }, { text: "120", options: cellOpts },
+    { text: "Yes", options: { ...resultOpts, color: C.green } },
+    { text: "12", options: { ...resultOpts, color: C.amber } },
+    { text: "65.00", options: { ...resultOpts, color: C.green } },
+  ],
+  [
+    { text: "SKU B\n(Seasonal)", options: { ...cellOpts, bold: true } },
+    emptyCell, emptyCell, emptyCell, emptyCell, emptyCell, emptyCell,
+    { text: "80", options: cellOpts }, { text: "90", options: cellOpts }, { text: "85", options: cellOpts },
+    emptyCell, emptyCell, emptyCell,
+    { text: "Yes", options: { ...resultOpts, color: C.green } },
+    { text: "12", options: { ...resultOpts, color: C.green, bold: true } },
+    { text: "21.25", options: { ...resultOpts, color: C.green } },
+  ],
+  [
+    { text: "SKU C\n(New)", options: { ...cellOpts, bold: true } },
+    emptyCell, emptyCell, emptyCell, emptyCell, emptyCell, emptyCell, emptyCell,
+    { text: "40", options: cellOpts }, { text: "50", options: cellOpts },
+    { text: "60", options: cellOpts }, { text: "70", options: cellOpts }, { text: "55", options: cellOpts },
+    { text: "No", options: { ...resultOpts, color: C.amber } },
+    { text: "5", options: { ...resultOpts, color: C.amber } },
+    { text: "55.00", options: { ...resultOpts, color: C.green } },
+  ],
+];
+
+s6.addTable(newTableData, {
+  x: LEFT_MARGIN, y: BODY_Y + 0.2, w: CONTENT_W,
+  colW: [1.1, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 1.05, 0.75, 1.0],
+  rowH: [0.45, 0.5, 0.5, 0.5],
+  border: { pt: 0.5, color: C.lineGray },
+});
+
+// Callout box
+const call6Y = BODY_Y + 2.5;
+s6.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: call6Y, w: CONTENT_W, h: 1.8, fill: { color: C.bgGray } });
+s6.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: call6Y, w: 0.06, h: 1.8, fill: { color: C.green } });
+s6.addText("Key Change", { x: LEFT_MARGIN + 0.3, y: call6Y + 0.1, w: 11.5, h: 0.3, fontSize: 15, fontFace: "Calibri", color: C.black, bold: true, margin: 0 });
+s6.addText([
+  { text: "SKU B (Seasonal): ", options: { bold: true, fontSize: 12, color: C.black } },
+  { text: "System checks historical data (2018+) and finds past transactions.", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "Denominator instantly becomes 12, giving ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "Avg COGS = 21.25 ", options: { fontSize: 12, color: C.green, bold: true } },
+  { text: "(vs 42.50 in old logic).", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "SKU C (New): ", options: { bold: true, fontSize: 12, color: C.black } },
+  { text: "No historical data found. Uses months with actual values (N=5). Same as FRS fallback.", options: { fontSize: 12, color: C.darkGray } },
+], { x: LEFT_MARGIN + 0.3, y: call6Y + 0.45, w: 11.5, h: 1.2, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// ============================================================
+// SLIDE 7: Side-by-Side Comparison
+// ============================================================
+let s7 = pres.addSlide();
+s7.background = { color: C.white };
+addSlideChrome(s7, "COMPARISON", "Side-by-Side: Old vs New", 7);
+
+const compHdr = { fill: { color: C.darkBlue }, color: C.white, bold: true, fontSize: 12, fontFace: "Calibri", align: "center", valign: "middle" };
+const compCell = { fontSize: 11, fontFace: "Calibri", align: "left", valign: "middle", color: C.darkGray };
+const compCellC = { fontSize: 11, fontFace: "Calibri", align: "center", valign: "middle", color: C.darkGray };
+
+const compTableData = [
+  [
+    { text: "Aspect", options: compHdr },
+    { text: "Old Logic (Current FRS)", options: { ...compHdr, fill: { color: C.red } } },
+    { text: "New Logic (Proposed)", options: { ...compHdr, fill: { color: C.green } } },
+  ],
+  [
+    { text: "Lookback Range", options: { ...compCell, bold: true } },
+    { text: "12 months only", options: compCellC },
+    { text: "Full history (2018+) to check SKU age,\nthen 12 months for COGS sum", options: compCellC },
+  ],
+  [
+    { text: "N for Existing SKU", options: { ...compCell, bold: true } },
+    { text: "Span from 1st transaction\nin window to current month", options: compCellC },
+    { text: "Instantly N = 12", options: { ...compCellC, color: C.green, bold: true } },
+  ],
+  [
+    { text: "N for New SKU", options: { ...compCell, bold: true } },
+    { text: "Span from 1st transaction\nin window to current month", options: compCellC },
+    { text: "Count of months\nwith actual COGS values", options: compCellC },
+  ],
+  [
+    { text: "Seasonal SKU\n(Q3 only, 255K total)", options: { ...compCell, bold: true } },
+    { text: "255K / 6 = 42,500", options: { ...compCellC, color: C.red, bold: true } },
+    { text: "255K / 12 = 21,250", options: { ...compCellC, color: C.green, bold: true } },
+  ],
+  [
+    { text: "Impact on\nMonth Cover", options: { ...compCell, bold: true } },
+    { text: "Lower Month Cover\n(overestimated consumption)", options: { ...compCellC, color: C.red } },
+    { text: "Higher Month Cover\n(true annual run rate)", options: { ...compCellC, color: C.green } },
+  ],
+];
+
+s7.addTable(compTableData, {
+  x: LEFT_MARGIN, y: BODY_Y + 0.2, w: CONTENT_W,
+  colW: [2.5, 4.85, 4.85],
+  rowH: [0.4, 0.65, 0.65, 0.65, 0.65, 0.65],
+  border: { pt: 0.5, color: C.lineGray },
+});
+
+// Bottom note
+s7.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: 5.6, w: CONTENT_W, h: 0.5, fill: { color: C.darkBlue } });
+s7.addText("The new logic correctly identifies seasonal SKUs vs truly new SKUs by checking historical data beyond the 12-month window.", {
+  x: LEFT_MARGIN + 0.3, y: 5.6, w: CONTENT_W - 0.6, h: 0.5,
+  fontSize: 12, fontFace: "Calibri", color: C.white, valign: "middle", italic: true, margin: 0,
+});
+
+// ============================================================
+// SLIDE 8: Impact - Decision Flow
+// ============================================================
+let s8 = pres.addSlide();
+s8.background = { color: C.white };
+addSlideChrome(s8, "IMPACT ANALYSIS", "Seasonal SKU Decision Flow", 8);
+
+// Step 1
+s8.addShape(pres.shapes.RECTANGLE, { x: 0.8, y: BODY_Y + 0.3, w: 3.2, h: 1.2, fill: { color: C.darkBlue } });
+s8.addText([
+  { text: "Step 1", options: { fontSize: 10, color: C.lineGray, breakLine: true } },
+  { text: "Look back to 2018+", options: { fontSize: 16, color: C.white, bold: true } },
+], { x: 0.8, y: BODY_Y + 0.3, w: 3.2, h: 1.2, align: "center", valign: "middle", margin: 0 });
+
+// Arrow 1->2
+s8.addShape(pres.shapes.LINE, { x: 4.1, y: BODY_Y + 0.9, w: 0.8, h: 0, line: { color: C.darkGray, width: 2 } });
+
+// Step 2
+s8.addShape(pres.shapes.RECTANGLE, { x: 5.0, y: BODY_Y + 0.3, w: 3.5, h: 1.2, fill: { color: C.blue } });
+s8.addText([
+  { text: "Step 2", options: { fontSize: 10, color: "B3E5FC", breakLine: true } },
+  { text: "Has historical data?", options: { fontSize: 16, color: C.white, bold: true } },
+], { x: 5.0, y: BODY_Y + 0.3, w: 3.5, h: 1.2, align: "center", valign: "middle", margin: 0 });
+
+// YES path down
+s8.addShape(pres.shapes.LINE, { x: 6.75, y: BODY_Y + 1.5, w: 0, h: 0.6, line: { color: C.green, width: 2 } });
+s8.addText("YES", { x: 6.9, y: BODY_Y + 1.65, w: 0.6, h: 0.3, fontSize: 11, color: C.green, bold: true, fontFace: "Calibri", margin: 0 });
+
+// YES result box
+s8.addShape(pres.shapes.RECTANGLE, { x: 5.0, y: BODY_Y + 2.2, w: 3.5, h: 1.0, fill: { color: C.green } });
+s8.addText([
+  { text: "N = 12 (Instantly)", options: { fontSize: 18, color: C.white, bold: true, breakLine: true } },
+  { text: "Existing / Seasonal SKU", options: { fontSize: 12, color: C.white } },
+], { x: 5.0, y: BODY_Y + 2.2, w: 3.5, h: 1.0, align: "center", valign: "middle", margin: 0 });
+
+// NO path right
+s8.addShape(pres.shapes.LINE, { x: 8.5, y: BODY_Y + 0.9, w: 1.0, h: 0, line: { color: C.amber, width: 2 } });
+s8.addText("NO", { x: 8.8, y: BODY_Y + 0.55, w: 0.6, h: 0.3, fontSize: 11, color: C.amber, bold: true, fontFace: "Calibri", margin: 0 });
+
+// NO result box
+s8.addShape(pres.shapes.RECTANGLE, { x: 9.6, y: BODY_Y + 0.3, w: 2.8, h: 1.2, fill: { color: C.amber } });
+s8.addText([
+  { text: "N = months with values", options: { fontSize: 16, color: C.white, bold: true, breakLine: true } },
+  { text: "Truly New SKU", options: { fontSize: 12, color: C.white } },
+], { x: 9.6, y: BODY_Y + 0.3, w: 2.8, h: 1.2, align: "center", valign: "middle", margin: 0 });
+
+// Real-world example box
+const exY = BODY_Y + 3.8;
+s8.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: exY, w: CONTENT_W, h: 1.5, fill: { color: C.bgGray } });
+s8.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: exY, w: 0.06, h: 1.5, fill: { color: C.blue } });
+s8.addText("Real-World Example", { x: LEFT_MARGIN + 0.3, y: exY + 0.1, w: 11.5, h: 0.3, fontSize: 15, fontFace: "Calibri", color: C.black, bold: true, margin: 0 });
+s8.addText([
+  { text: "SKU \"Dyson V15\" has been sold since 2020, but only has COGS in Jul-Sep 2025 (seasonal promotion).", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "Old Logic: ", options: { bold: true, fontSize: 12, color: C.red } },
+  { text: "First data at M7 in window, span = 6. Avg COGS = Total / 6 (inflated average)", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "New Logic: ", options: { bold: true, fontSize: 12, color: C.green } },
+  { text: "Historical data found (2020). N = 12 instantly. Avg COGS = Total / 12 (true annual rate)", options: { fontSize: 12, color: C.darkGray } },
+], { x: LEFT_MARGIN + 0.3, y: exY + 0.4, w: 11.5, h: 1.0, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// ============================================================
+// SLIDE 9: Summary
+// ============================================================
+let s9 = pres.addSlide();
+s9.background = { color: C.white };
+addSlideChrome(s9, "SUMMARY", "Summary of Changes", 9);
+
+const summaryItems = [
+  { title: "Historical Lookback", desc: "System now checks all data from 2018 onwards to determine if a SKU is new or existing", color: C.darkBlue },
+  { title: "Instant N = 12 for Existing SKUs", desc: "Any SKU with historical data before the 12-month window automatically gets denominator = 12", color: C.green },
+  { title: "Accurate Seasonal Treatment", desc: "Seasonal SKUs are no longer treated as new articles, giving a true annual average", color: C.blue },
+  { title: "New SKU Fallback Preserved", desc: "Truly new SKUs (no history) still use count of months with actual values", color: C.amber },
+];
+
+summaryItems.forEach((item, i) => {
+  const yPos = BODY_Y + 0.3 + i * 1.15;
+  s9.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: yPos, w: CONTENT_W, h: 0.95, fill: { color: C.bgGray } });
+  s9.addShape(pres.shapes.RECTANGLE, { x: LEFT_MARGIN, y: yPos, w: 0.06, h: 0.95, fill: { color: item.color } });
+  s9.addText(item.title, { x: LEFT_MARGIN + 0.3, y: yPos + 0.1, w: 11.5, h: 0.35, fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0 });
+  s9.addText(item.desc, { x: LEFT_MARGIN + 0.3, y: yPos + 0.5, w: 11.5, h: 0.35, fontSize: 12, fontFace: "Calibri", color: C.medGray, margin: 0 });
+});
+
+// Write file
+pres.writeFile({ fileName: "/home/user/Stock_FRS/COGS_Old_vs_New_Logic.pptx" })
+  .then(() => console.log("Presentation created successfully!"))
+  .catch(err => console.error("Error:", err));

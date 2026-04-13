@@ -1,0 +1,569 @@
+const pptxgen = require("pptxgenjs");
+const pres = new pptxgen();
+
+pres.layout = "LAYOUT_WIDE";
+pres.author = "Deloitte Consulting";
+pres.title = "Average COGS Calculation - Old vs New Logic";
+
+const W = 13.33;
+const H = 7.5;
+
+const C = {
+  black: "000000",
+  white: "FFFFFF",
+  darkBlue: "002776",
+  red: "FF0000",
+  blue: "00A1DE",
+  darkGray: "313131",
+  green: "3C8A2E",
+  medGray: "575757",
+  lightGray: "8C8C8C",
+  bgGray: "F2F2F2",
+  lineGray: "D0D0CE",
+  amber: "ED8B00",
+};
+
+const LEFT = 0.53;
+const CW = 12.2;
+const SECTION_Y = 0.36;
+const TITLE_Y = 0.75;
+const LINE_Y = 1.3;
+const BODY_Y = 1.5;
+const FOOTER_Y = 7.06;
+
+function addChrome(slide, section, title, page) {
+  slide.addText(section, {
+    x: LEFT, y: SECTION_Y, w: CW, h: 0.2,
+    fontSize: 9, fontFace: "Calibri", color: C.medGray, charSpacing: 1.5, margin: 0,
+  });
+  slide.addText(title, {
+    x: LEFT, y: TITLE_Y, w: CW, h: 0.45,
+    fontSize: 22, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+  });
+  slide.addShape(pres.shapes.LINE, {
+    x: LEFT, y: LINE_Y, w: CW, h: 0,
+    line: { color: C.red, width: 3 },
+  });
+  slide.addText(`${page} | Copyright \u00A9 2025 Deloitte T&T (Thailand) Co., Ltd.`, {
+    x: LEFT, y: FOOTER_Y, w: 5, h: 0.25,
+    fontSize: 7, fontFace: "Calibri", color: C.lightGray, align: "left", margin: 0,
+  });
+  slide.addText("CMG Unified Data Platform - Average COGS Calculation Old vs New", {
+    x: 5.5, y: FOOTER_Y, w: 7.0, h: 0.25,
+    fontSize: 7, fontFace: "Calibri", color: C.lightGray, align: "right", margin: 0,
+  });
+  slide.addText("Confidential", {
+    x: 11.7, y: 0.1, w: 1.0, h: 0.2,
+    fontSize: 8, fontFace: "Calibri", color: C.lightGray, align: "right", margin: 0,
+  });
+}
+
+// ============================================================
+// SLIDE 1: Title
+// ============================================================
+let s1 = pres.addSlide();
+s1.background = { color: C.white };
+
+s1.addShape(pres.shapes.RECTANGLE, {
+  x: 0, y: 3.0, w: W, h: 4.5,
+  fill: { color: C.white, transparency: 10 },
+});
+s1.addText("AVERAGE COGS CALCULATION", {
+  x: 1.0, y: 3.3, w: 8.0, h: 0.25,
+  fontSize: 12, fontFace: "Calibri", color: C.medGray, charSpacing: 1.5, margin: 0,
+});
+s1.addShape(pres.shapes.LINE, {
+  x: 1.0, y: 3.65, w: 8.0, h: 0,
+  line: { color: C.green, width: 3 },
+});
+s1.addText("Old vs New Requirement Logic", {
+  x: 1.0, y: 3.75, w: 9.0, h: 1.0,
+  fontSize: 42, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s1.addText("Unified Data Platform", {
+  x: 1.0, y: 4.85, w: 8.0, h: 0.4,
+  fontSize: 18, fontFace: "Calibri", color: C.darkGray, bold: true, margin: 0,
+});
+s1.addText("CMG Stock Aging FRS  |  Functional Requirement Change", {
+  x: 1.0, y: 5.3, w: 8.0, h: 0.3,
+  fontSize: 14, fontFace: "Calibri", color: C.medGray, margin: 0,
+});
+s1.addText("Confidential", {
+  x: 11.7, y: 0.1, w: 1.0, h: 0.2,
+  fontSize: 8, fontFace: "Calibri", color: C.lightGray, align: "right", margin: 0,
+});
+
+// ============================================================
+// SLIDE 2: Agenda
+// ============================================================
+let s2 = pres.addSlide();
+s2.background = { color: C.white };
+addChrome(s2, "AVERAGE COGS CALCULATION", "Agenda", 2);
+
+const agendaItems = [
+  { num: "01", title: "Current FRS Logic (Old)", desc: "12-month lookback with span-based denominator" },
+  { num: "02", title: "New Requirement Logic", desc: "Historical lookback with instant 12-month denominator" },
+  { num: "03", title: "Real Data Comparison", desc: "Article 11711000001 (Crocs) under both methods" },
+  { num: "04", title: "Impact & Decision Flow", desc: "How the change affects seasonal and existing articles" },
+];
+
+agendaItems.forEach((item, i) => {
+  const y = BODY_Y + 0.3 + i * 1.2;
+  s2.addShape(pres.shapes.RECTANGLE, { x: LEFT, y, w: 0.6, h: 0.6, fill: { color: C.darkBlue } });
+  s2.addText(item.num, { x: LEFT, y, w: 0.6, h: 0.6, fontSize: 18, fontFace: "Calibri", color: C.white, align: "center", valign: "middle", bold: true, margin: 0 });
+  s2.addText(item.title, { x: 1.4, y, w: 10, h: 0.32, fontSize: 18, fontFace: "Calibri", color: C.black, bold: true, margin: 0 });
+  s2.addText(item.desc, { x: 1.4, y: y + 0.35, w: 10, h: 0.25, fontSize: 13, fontFace: "Calibri", color: C.medGray, margin: 0 });
+  if (i < agendaItems.length - 1) {
+    s2.addShape(pres.shapes.LINE, { x: LEFT, y: y + 0.95, w: 11.5, h: 0, line: { color: C.lineGray, width: 0.5 } });
+  }
+});
+
+// ============================================================
+// SLIDE 3: Old Logic - Overview
+// ============================================================
+let s3 = pres.addSlide();
+s3.background = { color: C.white };
+addChrome(s3, "CURRENT FRS", "Old Logic: 12-Month Lookback Window", 3);
+
+// Formula box
+s3.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: BODY_Y + 0.15, w: CW, h: 0.6, fill: { color: C.darkBlue } });
+s3.addText("Average COGS  =  Sum of COGS across N months  /  N months", {
+  x: LEFT, y: BODY_Y + 0.15, w: CW, h: 0.6,
+  fontSize: 18, fontFace: "Consolas", color: C.white, align: "center", valign: "middle", margin: 0,
+});
+
+const cardY = BODY_Y + 1.0;
+const cardH = 3.6;
+const cardW = 5.8;
+
+// Card 1: Lookback Window
+s3.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: cardY, w: cardW, h: cardH, fill: { color: C.bgGray } });
+s3.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: cardY, w: cardW, h: 0.05, fill: { color: C.darkBlue } });
+s3.addText("Lookback Window", {
+  x: LEFT + 0.3, y: cardY + 0.15, w: cardW - 0.6, h: 0.35,
+  fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s3.addText([
+  { text: "Only looks at the past 12 months from report date", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "Report Apr 2025 \u2192 window is May 2024 \u2013 Apr 2025", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "No visibility into data before May 2024", options: { bullet: true, fontSize: 13, color: C.darkGray } },
+], { x: LEFT + 0.3, y: cardY + 0.6, w: cardW - 0.6, h: 2.8, fontFace: "Calibri", valign: "top", margin: 0, paraSpaceAfter: 6 });
+
+// Card 2: Denominator
+s3.addShape(pres.shapes.RECTANGLE, { x: LEFT + cardW + 0.6, y: cardY, w: cardW, h: cardH, fill: { color: C.bgGray } });
+s3.addShape(pres.shapes.RECTANGLE, { x: LEFT + cardW + 0.6, y: cardY, w: cardW, h: 0.05, fill: { color: C.amber } });
+s3.addText("Denominator (N)", {
+  x: LEFT + cardW + 0.9, y: cardY + 0.15, w: cardW - 0.6, h: 0.35,
+  fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s3.addText([
+  { text: "N = Span from 1st transaction to current month", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "First data at Aug 2024, report at Apr 2025", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "  \u2192 N = 9 (not 12)", options: { breakLine: true, fontSize: 13, color: C.amber, bold: true } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "Does NOT distinguish new vs old SKUs", options: { bullet: true, fontSize: 13, color: C.red, bold: true } },
+], { x: LEFT + cardW + 0.9, y: cardY + 0.6, w: cardW - 0.6, h: 2.8, fontFace: "Calibri", valign: "top", margin: 0, paraSpaceAfter: 6 });
+
+// ============================================================
+// SLIDE 4: Old Logic - Real Data Table
+// ============================================================
+let s4 = pres.addSlide();
+s4.background = { color: C.white };
+addChrome(s4, "CURRENT FRS", "Old Logic: Article 11711000001 (Crocs)", 4);
+
+// Context line
+s4.addText("Report Month: Apr 2025  |  12-Month Window: May 2024 \u2013 Apr 2025  |  Brand: Crocs", {
+  x: LEFT, y: BODY_Y + 0.05, w: CW, h: 0.3,
+  fontSize: 11, fontFace: "Calibri", color: C.medGray, margin: 0,
+});
+
+const hdr = { fill: { color: C.darkBlue }, color: C.white, bold: true, fontSize: 8, fontFace: "Calibri", align: "center", valign: "middle" };
+const cell = { fontSize: 9, fontFace: "Calibri", align: "center", valign: "middle", color: C.darkGray };
+const dash = { text: "-", options: { fontSize: 9, fontFace: "Calibri", align: "center", valign: "middle", color: C.lineGray } };
+const res = { fontSize: 9, fontFace: "Calibri", align: "center", valign: "middle", color: C.black, bold: true };
+
+// Month headers: May'24 through Apr'25
+const months = ["May'24","Jun'24","Jul'24","Aug'24","Sep'24","Oct'24","Nov'24","Dec'24","Jan'25","Feb'25","Mar'25","Apr'25"];
+
+const oldData = [
+  // Header
+  [
+    { text: "Article", options: hdr },
+    ...months.map(m => ({ text: m, options: hdr })),
+    { text: "N\n(Span)", options: { ...hdr, fill: { color: C.amber } } },
+    { text: "Total", options: hdr },
+    { text: "Avg\nCOGS", options: { ...hdr, fill: { color: C.green } } },
+  ],
+  // Data row
+  [
+    { text: "11711000001\n(Crocs)", options: { ...cell, bold: true, fontSize: 8 } },
+    dash, dash, dash,
+    { text: "749", options: cell },
+    { text: "204", options: cell },
+    { text: "477", options: cell },
+    { text: "1,226", options: cell },
+    { text: "545", options: cell },
+    { text: "273", options: cell },
+    dash,
+    { text: "136", options: cell },
+    { text: "68", options: cell },
+    { text: "9", options: { ...res, color: C.amber } },
+    { text: "3,679", options: res },
+    { text: "408.78", options: { ...res, color: C.red } },
+  ],
+];
+
+// colW: Article(1.2) + 12 months(0.65 each = 7.8) + N(0.7) + Total(0.9) + Avg(1.0) = 11.6 ... need 12.2
+// Adjust: Article(1.3) + 12×0.65(7.8) + N(0.8) + Total(1.0) + Avg(1.3) = 12.2
+s4.addTable(oldData, {
+  x: LEFT, y: BODY_Y + 0.4, w: CW,
+  colW: [1.3, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.8, 1.0, 1.3],
+  rowH: [0.45, 0.5],
+  border: { pt: 0.5, color: C.lineGray },
+});
+
+// Calculation breakdown
+const calcY = BODY_Y + 1.55;
+s4.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: calcY, w: CW, h: 2.6, fill: { color: C.bgGray } });
+s4.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: calcY, w: 0.06, h: 2.6, fill: { color: C.amber } });
+
+s4.addText("How the Old Logic Calculates", {
+  x: LEFT + 0.3, y: calcY + 0.1, w: 11, h: 0.35,
+  fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s4.addText([
+  { text: "1.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "12-month window: May 2024 \u2013 Apr 2025", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 6 } },
+  { text: "2.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "First COGS transaction found at: ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "Aug 2024", options: { fontSize: 12, color: C.amber, bold: true, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 6 } },
+  { text: "3.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "Span from Aug 2024 to Apr 2025 = ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "9 months", options: { fontSize: 12, color: C.amber, bold: true, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 6 } },
+  { text: "4.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "Sum of COGS = 3,679.02", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 6 } },
+  { text: "5.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "Average COGS = 3,679.02 / 9 = ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "408.78", options: { fontSize: 14, color: C.red, bold: true } },
+], { x: LEFT + 0.3, y: calcY + 0.5, w: 11, h: 2.0, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// Problem callout
+const probY = BODY_Y + 4.35;
+s4.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: probY, w: CW, h: 0.8, fill: { color: "FFF3E0" } });
+s4.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: probY, w: 0.06, h: 0.8, fill: { color: C.red } });
+s4.addText([
+  { text: "Problem: ", options: { bold: true, fontSize: 12, color: C.red } },
+  { text: "This article has been sold since at least Feb 2024 (historical data exists before the window),", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "but the old logic only sees the 12-month window and uses span = 9 instead of 12.", options: { fontSize: 12, color: C.darkGray } },
+], { x: LEFT + 0.3, y: probY + 0.1, w: 11.5, h: 0.6, fontFace: "Calibri", valign: "middle", margin: 0 });
+
+// ============================================================
+// SLIDE 5: New Logic - Overview
+// ============================================================
+let s5 = pres.addSlide();
+s5.background = { color: C.white };
+addChrome(s5, "NEW REQUIREMENT", "New Logic: Historical Lookback", 5);
+
+// Formula box
+s5.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: BODY_Y + 0.15, w: CW, h: 0.6, fill: { color: C.darkBlue } });
+s5.addText("Average COGS  =  Sum of COGS (last 12 months)  /  N months", {
+  x: LEFT, y: BODY_Y + 0.15, w: CW, h: 0.6,
+  fontSize: 18, fontFace: "Consolas", color: C.white, align: "center", valign: "middle", margin: 0,
+});
+
+const c5Y = BODY_Y + 1.0;
+
+// Card 1: Existing SKU
+s5.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: c5Y, w: cardW, h: cardH, fill: { color: C.bgGray } });
+s5.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: c5Y, w: cardW, h: 0.05, fill: { color: C.green } });
+s5.addText("Existing SKU (has data before window)", {
+  x: LEFT + 0.3, y: c5Y + 0.15, w: cardW - 0.6, h: 0.35,
+  fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s5.addText([
+  { text: "Look back to start of ALL data (e.g., 2018)", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "If ANY transaction exists before the window", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "N = 12 instantly", options: { bullet: true, breakLine: true, fontSize: 18, color: C.green, bold: true } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "Even if only a few months have COGS in window", options: { bullet: true, fontSize: 13, color: C.darkGray } },
+], { x: LEFT + 0.3, y: c5Y + 0.6, w: cardW - 0.6, h: 2.8, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// Card 2: New SKU
+s5.addShape(pres.shapes.RECTANGLE, { x: LEFT + cardW + 0.6, y: c5Y, w: cardW, h: cardH, fill: { color: C.bgGray } });
+s5.addShape(pres.shapes.RECTANGLE, { x: LEFT + cardW + 0.6, y: c5Y, w: cardW, h: 0.05, fill: { color: C.amber } });
+s5.addText("New SKU (created within 12 months)", {
+  x: LEFT + cardW + 0.9, y: c5Y + 0.15, w: cardW - 0.6, h: 0.35,
+  fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s5.addText([
+  { text: "No historical data before the 12-month window", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "N = count of months with actual COGS values", options: { bullet: true, breakLine: true, fontSize: 13, color: C.darkGray } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "Same as current FRS fallback", options: { bullet: true, breakLine: true, fontSize: 14, color: C.amber, bold: true } },
+  { text: "", options: { breakLine: true, fontSize: 10 } },
+  { text: "Prevents artificially low averages for new articles", options: { bullet: true, fontSize: 13, color: C.darkGray } },
+], { x: LEFT + cardW + 0.9, y: c5Y + 0.6, w: cardW - 0.6, h: 2.8, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// ============================================================
+// SLIDE 6: New Logic - Same Real Data
+// ============================================================
+let s6 = pres.addSlide();
+s6.background = { color: C.white };
+addChrome(s6, "NEW REQUIREMENT", "New Logic: Article 11711000001 (Crocs)", 6);
+
+s6.addText("Report Month: Apr 2025  |  12-Month Window: May 2024 \u2013 Apr 2025  |  Historical Data: Feb 2024 found", {
+  x: LEFT, y: BODY_Y + 0.05, w: CW, h: 0.3,
+  fontSize: 11, fontFace: "Calibri", color: C.medGray, margin: 0,
+});
+
+const newData = [
+  [
+    { text: "Article", options: hdr },
+    ...months.map(m => ({ text: m, options: hdr })),
+    { text: "Has\nHist.?", options: { ...hdr, fill: { color: C.blue } } },
+    { text: "N", options: { ...hdr, fill: { color: C.amber } } },
+    { text: "Avg\nCOGS", options: { ...hdr, fill: { color: C.green } } },
+  ],
+  [
+    { text: "11711000001\n(Crocs)", options: { ...cell, bold: true, fontSize: 8 } },
+    dash, dash, dash,
+    { text: "749", options: cell },
+    { text: "204", options: cell },
+    { text: "477", options: cell },
+    { text: "1,226", options: cell },
+    { text: "545", options: cell },
+    { text: "273", options: cell },
+    dash,
+    { text: "136", options: cell },
+    { text: "68", options: cell },
+    { text: "Yes", options: { ...res, color: C.green } },
+    { text: "12", options: { ...res, color: C.green } },
+    { text: "306.59", options: { ...res, color: C.green } },
+  ],
+];
+
+s6.addTable(newData, {
+  x: LEFT, y: BODY_Y + 0.4, w: CW,
+  colW: [1.3, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.65, 0.8, 1.0, 1.3],
+  rowH: [0.45, 0.5],
+  border: { pt: 0.5, color: C.lineGray },
+});
+
+// Calculation breakdown
+const c6Y = BODY_Y + 1.55;
+s6.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: c6Y, w: CW, h: 2.6, fill: { color: C.bgGray } });
+s6.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: c6Y, w: 0.06, h: 2.6, fill: { color: C.green } });
+
+s6.addText("How the New Logic Calculates", {
+  x: LEFT + 0.3, y: c6Y + 0.1, w: 11, h: 0.35,
+  fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s6.addText([
+  { text: "1.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "Check ALL historical data from 2018 onwards", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 6 } },
+  { text: "2.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "Found data in ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "Feb 2024", options: { fontSize: 12, color: C.green, bold: true } },
+  { text: " (before the May 2024 window start)", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 6 } },
+  { text: "3.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "This is NOT a new SKU \u2192 ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "N = 12 instantly", options: { fontSize: 12, color: C.green, bold: true, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 6 } },
+  { text: "4.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "Sum of COGS (within 12-month window) = 3,679.02", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 6 } },
+  { text: "5.  ", options: { bold: true, fontSize: 12, color: C.darkBlue } },
+  { text: "Average COGS = 3,679.02 / 12 = ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "306.59", options: { fontSize: 14, color: C.green, bold: true } },
+], { x: LEFT + 0.3, y: c6Y + 0.5, w: 11, h: 2.0, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// Result callout
+const resY = BODY_Y + 4.35;
+s6.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: resY, w: CW, h: 0.8, fill: { color: "E8F5E9" } });
+s6.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: resY, w: 0.06, h: 0.8, fill: { color: C.green } });
+s6.addText([
+  { text: "Result: ", options: { bold: true, fontSize: 12, color: C.green } },
+  { text: "Average COGS drops from ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "408.78 (old) ", options: { fontSize: 12, color: C.red, bold: true } },
+  { text: "to ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "306.59 (new)", options: { fontSize: 12, color: C.green, bold: true } },
+  { text: " \u2014 a more accurate annual run rate for this existing Crocs article.", options: { fontSize: 12, color: C.darkGray } },
+], { x: LEFT + 0.3, y: resY + 0.1, w: 11.5, h: 0.6, fontFace: "Calibri", valign: "middle", margin: 0 });
+
+// ============================================================
+// SLIDE 7: Side-by-Side Comparison (Real Data)
+// ============================================================
+let s7 = pres.addSlide();
+s7.background = { color: C.white };
+addChrome(s7, "COMPARISON", "Side-by-Side: Old vs New (Article 11711000001)", 7);
+
+const cH = { fill: { color: C.darkBlue }, color: C.white, bold: true, fontSize: 12, fontFace: "Calibri", align: "center", valign: "middle" };
+const cC = { fontSize: 11, fontFace: "Calibri", align: "left", valign: "middle", color: C.darkGray };
+const cCC = { fontSize: 11, fontFace: "Calibri", align: "center", valign: "middle", color: C.darkGray };
+
+const compData = [
+  [
+    { text: "Aspect", options: cH },
+    { text: "Old Logic (Current FRS)", options: { ...cH, fill: { color: C.red } } },
+    { text: "New Logic (Proposed)", options: { ...cH, fill: { color: C.green } } },
+  ],
+  [
+    { text: "Lookback Range", options: { ...cC, bold: true } },
+    { text: "12 months only\n(May 2024 \u2013 Apr 2025)", options: cCC },
+    { text: "Full history (2018+) to check SKU age,\nthen 12 months for COGS sum", options: cCC },
+  ],
+  [
+    { text: "Historical Data Check", options: { ...cC, bold: true } },
+    { text: "None \u2014 ignores data\nbefore the window", options: cCC },
+    { text: "Finds Feb 2024 data \u2192\nSKU is existing, not new", options: { ...cCC, color: C.green } },
+  ],
+  [
+    { text: "Denominator (N)", options: { ...cC, bold: true } },
+    { text: "9\n(span: Aug 2024 \u2013 Apr 2025)", options: { ...cCC, color: C.red, bold: true } },
+    { text: "12\n(instantly, has history)", options: { ...cCC, color: C.green, bold: true } },
+  ],
+  [
+    { text: "Total COGS in Window", options: { ...cC, bold: true } },
+    { text: "3,679.02", options: cCC },
+    { text: "3,679.02", options: cCC },
+  ],
+  [
+    { text: "Average COGS", options: { ...cC, bold: true } },
+    { text: "3,679.02 / 9 = 408.78", options: { ...cCC, color: C.red, bold: true, fontSize: 12 } },
+    { text: "3,679.02 / 12 = 306.59", options: { ...cCC, color: C.green, bold: true, fontSize: 12 } },
+  ],
+  [
+    { text: "Impact on\nMonth Cover", options: { ...cC, bold: true } },
+    { text: "Lower Month Cover\n(overestimated consumption)", options: { ...cCC, color: C.red } },
+    { text: "Higher Month Cover\n(true annual run rate)", options: { ...cCC, color: C.green } },
+  ],
+];
+
+s7.addTable(compData, {
+  x: LEFT, y: BODY_Y + 0.15, w: CW,
+  colW: [2.4, 4.9, 4.9],
+  rowH: [0.4, 0.55, 0.55, 0.55, 0.4, 0.55, 0.55],
+  border: { pt: 0.5, color: C.lineGray },
+  autoPage: false,
+});
+
+// Bottom note
+s7.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: 5.55, w: CW, h: 0.5, fill: { color: C.darkBlue } });
+s7.addText("Same COGS total (3,679.02), different denominator \u2192 Old: 408.78 vs New: 306.59. The new logic gives a true annual average.", {
+  x: LEFT + 0.3, y: 5.55, w: CW - 0.6, h: 0.5,
+  fontSize: 12, fontFace: "Calibri", color: C.white, valign: "middle", italic: true, margin: 0,
+});
+
+// ============================================================
+// SLIDE 8: Decision Flow
+// ============================================================
+let s8 = pres.addSlide();
+s8.background = { color: C.white };
+addChrome(s8, "IMPACT ANALYSIS", "Seasonal SKU Decision Flow", 8);
+
+// Step 1
+s8.addShape(pres.shapes.RECTANGLE, { x: 0.8, y: BODY_Y + 0.3, w: 3.2, h: 1.2, fill: { color: C.darkBlue } });
+s8.addText([
+  { text: "Step 1", options: { fontSize: 10, color: C.lineGray, breakLine: true } },
+  { text: "Look back to 2018+", options: { fontSize: 16, color: C.white, bold: true } },
+], { x: 0.8, y: BODY_Y + 0.3, w: 3.2, h: 1.2, align: "center", valign: "middle", margin: 0 });
+
+// Arrow 1->2
+s8.addShape(pres.shapes.LINE, { x: 4.1, y: BODY_Y + 0.9, w: 0.8, h: 0, line: { color: C.darkGray, width: 2 } });
+
+// Step 2
+s8.addShape(pres.shapes.RECTANGLE, { x: 5.0, y: BODY_Y + 0.3, w: 3.5, h: 1.2, fill: { color: C.blue } });
+s8.addText([
+  { text: "Step 2", options: { fontSize: 10, color: "B3E5FC", breakLine: true } },
+  { text: "Has historical data?", options: { fontSize: 16, color: C.white, bold: true } },
+], { x: 5.0, y: BODY_Y + 0.3, w: 3.5, h: 1.2, align: "center", valign: "middle", margin: 0 });
+
+// YES path down
+s8.addShape(pres.shapes.LINE, { x: 6.75, y: BODY_Y + 1.5, w: 0, h: 0.6, line: { color: C.green, width: 2 } });
+s8.addText("YES", { x: 6.9, y: BODY_Y + 1.65, w: 0.6, h: 0.3, fontSize: 11, color: C.green, bold: true, fontFace: "Calibri", margin: 0 });
+
+// YES result
+s8.addShape(pres.shapes.RECTANGLE, { x: 5.0, y: BODY_Y + 2.2, w: 3.5, h: 1.0, fill: { color: C.green } });
+s8.addText([
+  { text: "N = 12 (Instantly)", options: { fontSize: 18, color: C.white, bold: true, breakLine: true } },
+  { text: "Existing / Seasonal SKU", options: { fontSize: 12, color: C.white } },
+], { x: 5.0, y: BODY_Y + 2.2, w: 3.5, h: 1.0, align: "center", valign: "middle", margin: 0 });
+
+// NO path right
+s8.addShape(pres.shapes.LINE, { x: 8.5, y: BODY_Y + 0.9, w: 1.0, h: 0, line: { color: C.amber, width: 2 } });
+s8.addText("NO", { x: 8.8, y: BODY_Y + 0.55, w: 0.6, h: 0.3, fontSize: 11, color: C.amber, bold: true, fontFace: "Calibri", margin: 0 });
+
+// NO result
+s8.addShape(pres.shapes.RECTANGLE, { x: 9.6, y: BODY_Y + 0.3, w: 2.8, h: 1.2, fill: { color: C.amber } });
+s8.addText([
+  { text: "N = months with values", options: { fontSize: 16, color: C.white, bold: true, breakLine: true } },
+  { text: "Truly New SKU", options: { fontSize: 12, color: C.white } },
+], { x: 9.6, y: BODY_Y + 0.3, w: 2.8, h: 1.2, align: "center", valign: "middle", margin: 0 });
+
+// Real example box
+const exY = BODY_Y + 3.6;
+s8.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: exY, w: CW, h: 2.0, fill: { color: C.bgGray } });
+s8.addShape(pres.shapes.RECTANGLE, { x: LEFT, y: exY, w: 0.06, h: 2.0, fill: { color: C.blue } });
+s8.addText("Real Data: Article 11711000001 (Crocs)", {
+  x: LEFT + 0.3, y: exY + 0.1, w: 11, h: 0.3,
+  fontSize: 15, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+});
+s8.addText([
+  { text: "This Crocs article has COGS in Aug\u2013Dec 2024, Jan, Mar\u2013Apr 2025 (8 months with values out of 12).", options: { fontSize: 12, color: C.darkGray, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 4 } },
+  { text: "Old Logic: ", options: { bold: true, fontSize: 12, color: C.red } },
+  { text: "First data at Aug 2024, span = 9 months. Avg COGS = 3,679.02 / 9 = ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "408.78", options: { fontSize: 12, color: C.red, bold: true, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 4 } },
+  { text: "New Logic: ", options: { bold: true, fontSize: 12, color: C.green } },
+  { text: "Historical data found (Feb 2024). N = 12 instantly. Avg COGS = 3,679.02 / 12 = ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "306.59", options: { fontSize: 12, color: C.green, bold: true, breakLine: true } },
+  { text: "", options: { breakLine: true, fontSize: 4 } },
+  { text: "Difference: 408.78 \u2212 306.59 = 102.19 per unit  \u2192  ", options: { fontSize: 12, color: C.darkGray } },
+  { text: "25% lower average COGS with new logic", options: { fontSize: 12, color: C.green, bold: true } },
+], { x: LEFT + 0.3, y: exY + 0.45, w: 11, h: 1.45, fontFace: "Calibri", valign: "top", margin: 0 });
+
+// ============================================================
+// SLIDE 9: Summary
+// ============================================================
+let s9 = pres.addSlide();
+s9.background = { color: C.white };
+addChrome(s9, "SUMMARY", "Summary of Changes", 9);
+
+const summaryItems = [
+  { title: "Historical Lookback", desc: "System checks all data from 2018 onwards to determine if a SKU is new or existing", color: C.darkBlue },
+  { title: "Instant N = 12 for Existing SKUs", desc: "Any SKU with historical data before the 12-month window automatically gets denominator = 12", color: C.green },
+  { title: "Accurate Seasonal Treatment", desc: "Seasonal SKUs are no longer treated as new articles, giving a true annual average", color: C.blue },
+  { title: "New SKU Fallback Preserved", desc: "Truly new SKUs (no history) still use count of months with actual values", color: C.amber },
+];
+
+summaryItems.forEach((item, i) => {
+  const y = BODY_Y + 0.3 + i * 1.2;
+  s9.addShape(pres.shapes.RECTANGLE, { x: LEFT, y, w: CW, h: 0.95, fill: { color: C.bgGray } });
+  s9.addShape(pres.shapes.RECTANGLE, { x: LEFT, y, w: 0.06, h: 0.95, fill: { color: item.color } });
+  s9.addText(item.title, {
+    x: LEFT + 0.3, y: y + 0.1, w: 11.5, h: 0.35,
+    fontSize: 16, fontFace: "Calibri", color: C.black, bold: true, margin: 0,
+  });
+  s9.addText(item.desc, {
+    x: LEFT + 0.3, y: y + 0.5, w: 11.5, h: 0.35,
+    fontSize: 12, fontFace: "Calibri", color: C.medGray, margin: 0,
+  });
+});
+
+// Write
+pres.writeFile({ fileName: "/home/user/Stock_FRS/COGS_Old_vs_New_Logic.pptx" })
+  .then(() => console.log("Presentation created successfully!"))
+  .catch(err => console.error("Error:", err));

@@ -1,0 +1,48 @@
+# GCP Cloud Build configuration
+
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/deepdive-web:latest',
+      '.'
+    ]
+
+  # Push the image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/deepdive-web:latest']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'deepdive-web'
+      - '--image=gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=TURSO_DATABASE_URL=${_TURSO_DATABASE_URL},TURSO_AUTH_TOKEN=${_TURSO_AUTH_TOKEN}'
+      - '--set-secrets=MORALIS_API_KEY=MORALIS_API_KEY:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--timeout=300'
+      - '--max-instances=10'
+
+images:
+  - 'gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/deepdive-web:latest'
+
+options:
+  machineType: 'N1_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _TURSO_DATABASE_URL: ''  # Set via Cloud Build trigger
+  _TURSO_AUTH_TOKEN: ''    # Set via Cloud Build trigger

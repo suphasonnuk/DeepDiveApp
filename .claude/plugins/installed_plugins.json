@@ -1,0 +1,314 @@
+{
+  "version": 2,
+  "plugins": {
+    "document-skills@anthropic-agent-skills": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63",
+        "version": "98669c11ca63",
+        "installedAt": "2026-03-26T05:08:03.261Z",
+        "lastUpdated": "2026-03-26T05:08:03.261Z",
+        "gitCommitSha": "98669c11ca63e9c81c11501e1437e5c47b556621"
+      }
+    ],
+    "context7@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/context7/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:04:16.356Z",
+        "lastUpdated": "2026-03-26T05:04:16.356Z"
+      }
+    ],
+    "agent-sdk-dev@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/agent-sdk-dev/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:06:38.139Z",
+        "lastUpdated": "2026-03-26T05:06:38.139Z"
+      }
+    ],
+    "clangd-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:06:39.390Z",
+        "lastUpdated": "2026-03-26T05:06:39.390Z"
+      }
+    ],
+    "claude-code-setup@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/claude-code-setup/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:06:40.658Z",
+        "lastUpdated": "2026-03-26T05:06:40.658Z"
+      }
+    ],
+    "claude-md-management@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/claude-md-management/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:06:41.964Z",
+        "lastUpdated": "2026-03-26T05:06:41.964Z"
+      }
+    ],
+    "code-review@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/code-review/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:06:43.259Z",
+        "lastUpdated": "2026-03-26T05:06:43.259Z"
+      }
+    ],
+    "code-simplifier@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/code-simplifier/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:06:44.598Z",
+        "lastUpdated": "2026-03-26T05:06:44.598Z"
+      }
+    ],
+    "commit-commands@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/commit-commands/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:06:45.893Z",
+        "lastUpdated": "2026-03-26T05:06:45.893Z"
+      }
+    ],
+    "csharp-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/csharp-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:06:47.201Z",
+        "lastUpdated": "2026-03-26T05:06:47.201Z"
+      }
+    ],
+    "explanatory-output-style@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/explanatory-output-style/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:06:49.793Z",
+        "lastUpdated": "2026-03-26T05:06:49.793Z"
+      }
+    ],
+    "feature-dev@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/feature-dev/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:06:51.075Z",
+        "lastUpdated": "2026-03-26T05:06:51.075Z"
+      }
+    ],
+    "frontend-design@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:06:52.325Z",
+        "lastUpdated": "2026-03-26T05:06:52.325Z"
+      }
+    ],
+    "gopls-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/gopls-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:06:53.627Z",
+        "lastUpdated": "2026-03-26T05:06:53.627Z"
+      }
+    ],
+    "hookify@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/hookify/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:06:54.942Z",
+        "lastUpdated": "2026-03-26T05:06:54.942Z"
+      }
+    ],
+    "jdtls-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/jdtls-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:06:56.206Z",
+        "lastUpdated": "2026-03-26T05:06:56.206Z"
+      }
+    ],
+    "kotlin-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/kotlin-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:06:57.487Z",
+        "lastUpdated": "2026-03-26T05:06:57.487Z"
+      }
+    ],
+    "learning-output-style@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/learning-output-style/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:06:58.793Z",
+        "lastUpdated": "2026-03-26T05:06:58.793Z"
+      }
+    ],
+    "lua-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/lua-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:07:00.108Z",
+        "lastUpdated": "2026-03-26T05:07:00.108Z"
+      }
+    ],
+    "mcp-server-dev@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/mcp-server-dev/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:07:02.643Z",
+        "lastUpdated": "2026-03-26T05:07:02.643Z"
+      }
+    ],
+    "php-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/php-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:07:03.935Z",
+        "lastUpdated": "2026-03-26T05:07:03.935Z"
+      }
+    ],
+    "playground@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/playground/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:07:05.260Z",
+        "lastUpdated": "2026-03-26T05:07:05.260Z"
+      }
+    ],
+    "plugin-dev@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/plugin-dev/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:07:06.572Z",
+        "lastUpdated": "2026-03-26T05:07:06.572Z"
+      }
+    ],
+    "pr-review-toolkit@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/pr-review-toolkit/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:07:07.928Z",
+        "lastUpdated": "2026-03-26T05:07:07.928Z"
+      }
+    ],
+    "pyright-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/pyright-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:07:09.906Z",
+        "lastUpdated": "2026-03-26T05:07:09.906Z"
+      }
+    ],
+    "ralph-loop@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/ralph-loop/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:07:12.026Z",
+        "lastUpdated": "2026-03-26T05:07:12.026Z"
+      }
+    ],
+    "ruby-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/ruby-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:07:14.067Z",
+        "lastUpdated": "2026-03-26T05:07:14.067Z"
+      }
+    ],
+    "rust-analyzer-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:07:16.500Z",
+        "lastUpdated": "2026-03-26T05:07:16.500Z"
+      }
+    ],
+    "security-guidance@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/security-guidance/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:07:18.490Z",
+        "lastUpdated": "2026-03-26T05:07:18.490Z"
+      }
+    ],
+    "skill-creator@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/skill-creator/unknown",
+        "version": "unknown",
+        "installedAt": "2026-03-26T05:07:19.960Z",
+        "lastUpdated": "2026-03-26T05:07:19.960Z"
+      }
+    ],
+    "swift-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/swift-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:07:21.357Z",
+        "lastUpdated": "2026-03-26T05:07:21.357Z"
+      }
+    ],
+    "typescript-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/typescript-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-03-26T05:07:22.724Z",
+        "lastUpdated": "2026-03-26T05:07:22.724Z"
+      }
+    ],
+    "claude-api@anthropic-agent-skills": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/anthropic-agent-skills/claude-api/98669c11ca63",
+        "version": "98669c11ca63",
+        "installedAt": "2026-03-26T05:07:33.325Z",
+        "lastUpdated": "2026-03-26T05:07:33.325Z",
+        "gitCommitSha": "98669c11ca63e9c81c11501e1437e5c47b556621"
+      }
+    ],
+    "example-skills@anthropic-agent-skills": [
+      {
+        "scope": "user",
+        "installPath": "/home/user/.claude/plugins/cache/anthropic-agent-skills/example-skills/98669c11ca63",
+        "version": "98669c11ca63",
+        "installedAt": "2026-03-26T05:08:04.766Z",
+        "lastUpdated": "2026-03-26T05:08:04.766Z",
+        "gitCommitSha": "98669c11ca63e9c81c11501e1437e5c47b556621"
+      }
+    ]
+  }
+}

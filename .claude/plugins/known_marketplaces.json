@@ -1,0 +1,26 @@
+{
+  "claude-plugins-official": {
+    "source": {
+      "source": "github",
+      "repo": "anthropics/claude-plugins-official"
+    },
+    "installLocation": "/home/user/.claude/plugins/marketplaces/claude-plugins-official",
+    "lastUpdated": "2026-03-27T15:03:19.406Z"
+  },
+  "anthropic-agent-skills": {
+    "source": {
+      "source": "github",
+      "repo": "anthropics/skills"
+    },
+    "installLocation": "/home/user/.claude/plugins/marketplaces/anthropic-agent-skills",
+    "lastUpdated": "2026-03-26T05:02:18.355Z"
+  },
+  "impeccable": {
+    "source": {
+      "source": "github",
+      "repo": "pbakaus/impeccable"
+    },
+    "installLocation": "/home/user/.claude/plugins/marketplaces/impeccable",
+    "lastUpdated": "2026-03-27T03:26:23.643Z"
+  }
+}

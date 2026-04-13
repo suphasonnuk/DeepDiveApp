@@ -1,0 +1,102 @@
+# Snapshot file
+# Unset all aliases to avoid conflicts with functions
+unalias -a 2>/dev/null || true
+# Functions
+eval "$(echo 'ZGlzYWJsZUdjZUNoZWNrICgpIAp7IAogICAgaWYgWyAtZiAiJFNFTlRJTkFMX0ZJTEUiIF07IHRo
+ZW4KICAgICAgICByZXR1cm47CiAgICBmaTsKICAgIGlmIFsgIiR7Q0xPVURfV09SS1NUQVRJT05T
+X0VOQUJMRV9NRVRBREFUQV9DUkVEU19DSEVDSzotZmFsc2V9IiA9ICJ0cnVlIiBdOyB0aGVuCiAg
+ICAgICAgcmV0dXJuOwogICAgZmk7CiAgICB0b3VjaCAkU0VOVElOQUxfRklMRTsKICAgIHdoaWxl
+IHRydWU7IGRvCiAgICAgICAgbWtkaXIgLXAgL2hvbWUvdXNlci8uY29uZmlnL2djbG91ZCAyPiAv
+ZGV2L251bGw7CiAgICAgICAgZWNobyBGYWxzZSA+IC9ob21lL3VzZXIvLmNvbmZpZy9nY2xvdWQv
+Z2NlIDI+IC9kZXYvbnVsbDsKICAgICAgICBpZiBbICR7Q0xPVURfV09SS1NUQVRJT05TX0NPTkZJ
+R19ESVNBQkxFX1NVRE86LWZhbHNlfSA9PSAiZmFsc2UiIF07IHRoZW4KICAgICAgICAgICAgc3Vk
+byBta2RpciAtcCAvcm9vdC8uY29uZmlnL2djbG91ZCAyPiAvZGV2L251bGw7CiAgICAgICAgICAg
+IHN1ZG8gc2ggLWMgJ2VjaG8gRmFsc2UgPiAvcm9vdC8uY29uZmlnL2djbG91ZC9nY2UnIDI+IC9k
+ZXYvbnVsbDsKICAgICAgICBmaTsKICAgICAgICBzbGVlcCA1bTsKICAgIGRvbmUKfQo=' | base64 -d)" > /dev/null 2>&1
+eval "$(echo 'Z2F3a2xpYnBhdGhfYXBwZW5kICgpIAp7IAogICAgWyAteiAiJEFXS0xJQlBBVEgiIF0gJiYgQVdL
+TElCUEFUSD1gZ2F3ayAnQkVHSU4ge3ByaW50IEVOVklST05bIkFXS0xJQlBBVEgiXX0nYDsKICAg
+IGV4cG9ydCBBV0tMSUJQQVRIPSIkQVdLTElCUEFUSDokKiIKfQo=' | base64 -d)" > /dev/null 2>&1
+eval "$(echo 'Z2F3a2xpYnBhdGhfZGVmYXVsdCAoKSAKeyAKICAgIHVuc2V0IEFXS0xJQlBBVEg7CiAgICBleHBv
+cnQgQVdLTElCUEFUSD1gZ2F3ayAnQkVHSU4ge3ByaW50IEVOVklST05bIkFXS0xJQlBBVEgiXX0n
+YAp9Cg==' | base64 -d)" > /dev/null 2>&1
+eval "$(echo 'Z2F3a2xpYnBhdGhfcHJlcGVuZCAoKSAKeyAKICAgIFsgLXogIiRBV0tMSUJQQVRIIiBdICYmIEFX
+S0xJQlBBVEg9YGdhd2sgJ0JFR0lOIHtwcmludCBFTlZJUk9OWyJBV0tMSUJQQVRIIl19J2A7CiAg
+ICBleHBvcnQgQVdLTElCUEFUSD0iJCo6JEFXS0xJQlBBVEgiCn0K' | base64 -d)" > /dev/null 2>&1
+eval "$(echo 'Z2F3a3BhdGhfYXBwZW5kICgpIAp7IAogICAgWyAteiAiJEFXS1BBVEgiIF0gJiYgQVdLUEFUSD1g
+Z2F3ayAnQkVHSU4ge3ByaW50IEVOVklST05bIkFXS1BBVEgiXX0nYDsKICAgIGV4cG9ydCBBV0tQ
+QVRIPSIkQVdLUEFUSDokKiIKfQo=' | base64 -d)" > /dev/null 2>&1
+eval "$(echo 'Z2F3a3BhdGhfZGVmYXVsdCAoKSAKeyAKICAgIHVuc2V0IEFXS1BBVEg7CiAgICBleHBvcnQgQVdL
+UEFUSD1gZ2F3ayAnQkVHSU4ge3ByaW50IEVOVklST05bIkFXS1BBVEgiXX0nYAp9Cg==' | base64 -d)" > /dev/null 2>&1
+eval "$(echo 'Z2F3a3BhdGhfcHJlcGVuZCAoKSAKeyAKICAgIFsgLXogIiRBV0tQQVRIIiBdICYmIEFXS1BBVEg9
+YGdhd2sgJ0JFR0lOIHtwcmludCBFTlZJUk9OWyJBV0tQQVRIIl19J2A7CiAgICBleHBvcnQgQVdL
+UEFUSD0iJCo6JEFXS1BBVEgiCn0K' | base64 -d)" > /dev/null 2>&1
+# Shell Options
+shopt -u autocd
+shopt -u assoc_expand_once
+shopt -u cdable_vars
+shopt -u cdspell
+shopt -u checkhash
+shopt -u checkjobs
+shopt -s checkwinsize
+shopt -s cmdhist
+shopt -u compat31
+shopt -u compat32
+shopt -u compat40
+shopt -u compat41
+shopt -u compat42
+shopt -u compat43
+shopt -u compat44
+shopt -s complete_fullquote
+shopt -u direxpand
+shopt -u dirspell
+shopt -u dotglob
+shopt -u execfail
+shopt -u expand_aliases
+shopt -u extdebug
+shopt -u extglob
+shopt -s extquote
+shopt -u failglob
+shopt -s force_fignore
+shopt -s globasciiranges
+shopt -s globskipdots
+shopt -u globstar
+shopt -u gnu_errfmt
+shopt -u histappend
+shopt -u histreedit
+shopt -u histverify
+shopt -s hostcomplete
+shopt -u huponexit
+shopt -u inherit_errexit
+shopt -s interactive_comments
+shopt -u lastpipe
+shopt -u lithist
+shopt -u localvar_inherit
+shopt -u localvar_unset
+shopt -s login_shell
+shopt -u mailwarn
+shopt -u no_empty_cmd_completion
+shopt -u nocaseglob
+shopt -u nocasematch
+shopt -u noexpand_translation
+shopt -u nullglob
+shopt -s patsub_replacement
+shopt -s progcomp
+shopt -u progcomp_alias
+shopt -s promptvars
+shopt -u restricted_shell
+shopt -u shift_verbose
+shopt -s sourcepath
+shopt -u varredir_close
+shopt -u xpg_echo
+set -o braceexpand
+set -o hashall
+set -o interactive-comments
+set -o monitor
+set -o onecmd
+shopt -s expand_aliases
+# Aliases
+# Check for rg availability
+if ! (unalias rg 2>/dev/null; command -v rg) >/dev/null 2>&1; then
+  alias rg='/home/user/.npm-global/lib/node_modules/\@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg'
+fi
+export PATH=/home/user/.npm-global/bin\:/home/user/.cache/cloud-code/m2c/bin\:/opt/code-oss/bin/remote-cli\:/home/user/.local/bin\:/home/user/.npm-global/bin\:/home/user/.local/bin\:/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/usr/local/go/bin

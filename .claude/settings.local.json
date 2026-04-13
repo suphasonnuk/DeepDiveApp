@@ -1,0 +1,41 @@
+{
+  "env": {
+    "CLAUDE_CODE_USE_VERTEX": "1",
+    "CLOUD_ML_REGION": "global",
+    "ANTHROPIC_VERTEX_PROJECT_ID": "sea-gcp-apa-con-bccb6-npd-1",
+    "VERTEX_REGION_CLAUDE_3_5_SONNET": "global",
+    "VERTEX_REGION_CLAUDE_3_5_HAIKU": "global",
+    "VERTEX_REGION_CLAUDE_3_7_SONNET": "global",
+    "VERTEX_REGION_CLAUDE_4_0_OPUS": "global",
+    "VERTEX_REGION_CLAUDE_4_0_SONNET": "global",
+    "VERTEX_REGION_CLAUDE_4_1_OPUS": "global",
+    "VERTEX_REGION_CLAUDE_4_5_SONNET": "global",
+    "VERTEX_REGION_CLAUDE_4_6_OPUS": "global",
+    "ANTHROPIC_MODEL": "claude-sonnet-4-6",
+    "ANTHROPIC_SMALL_FAST_MODEL": "claude-sonnet-4-6"
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:www.theguardian.com)",
+      "WebFetch(domain:pubmed.ncbi.nlm.nih.gov)",
+      "WebFetch(domain:www.nature.com)",
+      "WebFetch(domain:scholar.google.com)",
+      "Bash(node generate_branding_doc.js)",
+      "Bash(python /home/user/.claude/plugins/marketplaces/anthropic-agent-skills/skills/docx/scripts/office/validate.py DecodeYourself_ContentResearchGuide.docx)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:www.science.org)",
+      "WebFetch(domain:psycnet.apa.org)",
+      "WebFetch(domain:www.aeaweb.org)",
+      "WebFetch(domain:news.axios.com)",
+      "WebFetch(domain:journals.sagepub.com)",
+      "WebFetch(domain:axios.com)",
+      "WebFetch(domain:web.archive.org)",
+      "WebFetch(domain:www.ncbi.nlm.nih.gov)",
+      "WebFetch(domain:pmc.ncbi.nlm.nih.gov)"
+    ]
+  }
+}

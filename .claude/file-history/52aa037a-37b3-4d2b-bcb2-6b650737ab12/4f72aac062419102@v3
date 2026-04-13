@@ -1,0 +1,512 @@
+const fs = require("fs");
+const {
+  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+  Header, Footer, AlignmentType, BorderStyle, WidthType, ShadingType,
+  HeadingLevel, LevelFormat, PageBreak, PageNumber,
+} = require("docx");
+
+const DK_BLUE = "002776";
+const RED = "FF0000";
+const GREEN = "3C8A2E";
+const AMBER = "ED8B00";
+const BLUE = "00A1DE";
+const GRAY = "575757";
+const LT_GRAY = "F2F2F2";
+const LINE_GRAY = "D0D0CE";
+
+const border = { style: BorderStyle.SINGLE, size: 1, color: LINE_GRAY };
+const borders = { top: border, bottom: border, left: border, right: border };
+const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+function p(text, opts = {}) {
+  const runs = [];
+  if (typeof text === "string") {
+    runs.push(new TextRun({ text, font: "Calibri", size: opts.size || 22, bold: opts.bold, italic: opts.italic, color: opts.color || "313131" }));
+  } else {
+    text.forEach(t => {
+      runs.push(new TextRun({ text: t.text, font: "Calibri", size: t.size || opts.size || 22, bold: t.bold, italic: t.italic, color: t.color || opts.color || "313131", break: t.break }));
+    });
+  }
+  return new Paragraph({
+    children: runs,
+    spacing: { before: opts.spaceBefore || 0, after: opts.spaceAfter || 120 },
+    alignment: opts.align || AlignmentType.LEFT,
+    indent: opts.indent ? { left: opts.indent } : undefined,
+    ...(opts.heading ? { heading: opts.heading } : {}),
+    ...(opts.bullet ? { numbering: { reference: "bullets", level: 0 } } : {}),
+    ...(opts.numbered ? { numbering: { reference: "numbers", level: 0 } } : {}),
+  });
+}
+
+function headerCell(text, fill = DK_BLUE, width = 3120) {
+  return new TableCell({
+    borders,
+    width: { size: width, type: WidthType.DXA },
+    shading: { fill, type: ShadingType.CLEAR },
+    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    children: [new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text, font: "Calibri", size: 20, bold: true, color: "FFFFFF" })],
+    })],
+  });
+}
+
+function dataCell(text, opts = {}) {
+  return new TableCell({
+    borders,
+    width: { size: opts.width || 3120, type: WidthType.DXA },
+    shading: opts.fill ? { fill: opts.fill, type: ShadingType.CLEAR } : undefined,
+    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    children: [new Paragraph({
+      alignment: opts.align || AlignmentType.CENTER,
+      children: [new TextRun({ text, font: "Calibri", size: opts.size || 20, bold: opts.bold, color: opts.color || "313131" })],
+    })],
+  });
+}
+
+function separator() {
+  return new Paragraph({
+    spacing: { before: 120, after: 120 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: RED, space: 4 } },
+    children: [],
+  });
+}
+
+function sectionHeader(text) {
+  return new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [9360],
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: noBorders,
+            width: { size: 9360, type: WidthType.DXA },
+            shading: { fill: DK_BLUE, type: ShadingType.CLEAR },
+            margins: { top: 80, bottom: 80, left: 150, right: 150 },
+            children: [new Paragraph({
+              children: [new TextRun({ text, font: "Calibri", size: 22, bold: true, color: "FFFFFF" })],
+            })],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+function calloutBox(titleText, bodyRuns, barColor, bgColor = LT_GRAY) {
+  return new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [120, 9240],
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: noBorders,
+            width: { size: 120, type: WidthType.DXA },
+            shading: { fill: barColor, type: ShadingType.CLEAR },
+            children: [new Paragraph({ children: [] })],
+          }),
+          new TableCell({
+            borders: noBorders,
+            width: { size: 9240, type: WidthType.DXA },
+            shading: { fill: bgColor, type: ShadingType.CLEAR },
+            margins: { top: 100, bottom: 100, left: 150, right: 150 },
+            children: [
+              new Paragraph({
+                spacing: { after: 80 },
+                children: [new TextRun({ text: titleText, font: "Calibri", size: 22, bold: true, color: barColor })],
+              }),
+              new Paragraph({
+                children: bodyRuns.map(r => new TextRun({ text: r.text, font: "Calibri", size: 20, bold: r.bold, italic: r.italic, color: r.color || "313131", break: r.break })),
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+const doc = new Document({
+  styles: {
+    default: { document: { run: { font: "Calibri", size: 22 } } },
+    paragraphStyles: [
+      { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 32, bold: true, font: "Calibri", color: DK_BLUE },
+        paragraph: { spacing: { before: 240, after: 120 }, outlineLevel: 0 } },
+      { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 26, bold: true, font: "Calibri", color: DK_BLUE },
+        paragraph: { spacing: { before: 200, after: 100 }, outlineLevel: 1 } },
+    ],
+  },
+  numbering: {
+    config: [
+      { reference: "bullets", levels: [{ level: 0, format: LevelFormat.BULLET, text: "\u2022", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
+      { reference: "numbers", levels: [{ level: 0, format: LevelFormat.DECIMAL, text: "%1.", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
+    ],
+  },
+  sections: [{
+    properties: {
+      page: {
+        size: { width: 12240, height: 15840 },
+        margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+      },
+    },
+    headers: {
+      default: new Header({
+        children: [
+          new Paragraph({
+            border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: RED, space: 4 } },
+            children: [
+              new TextRun({ text: "CMG Unified Data Platform  |  Stock Aging Report  |  Average COGS Calculation", font: "Calibri", size: 16, color: GRAY }),
+            ],
+          }),
+        ],
+      }),
+    },
+    footers: {
+      default: new Footer({
+        children: [
+          new Paragraph({
+            border: { top: { style: BorderStyle.SINGLE, size: 4, color: LINE_GRAY, space: 4 } },
+            children: [
+              new TextRun({ text: "Confidential  |  Deloitte Consulting  |  Page ", font: "Calibri", size: 16, color: GRAY }),
+              new TextRun({ children: [PageNumber.CURRENT], font: "Calibri", size: 16, color: GRAY }),
+            ],
+          }),
+        ],
+      }),
+    },
+    children: [
+      // ========== EMAIL HEADER ==========
+      p([
+        { text: "Subject: ", bold: true, color: GRAY },
+        { text: "Stock Aging Report \u2014 Average COGS Calculation: Current vs Proposed Approach", bold: true, color: DK_BLUE },
+      ], { spaceAfter: 200, size: 24 }),
+
+      separator(),
+
+      p("Dear All,", { spaceAfter: 200 }),
+      p("I would like to share with you a comparison between the current approach and a proposed approach for calculating the Average COGS in the Stock Aging report. Below is a summary of how each method works, along with a real data example to illustrate the difference.", { spaceAfter: 200 }),
+
+      // ========== SECTION 1: Current Approach ==========
+      separator(),
+      sectionHeader("Current Approach"),
+      p("", { spaceAfter: 80 }),
+
+      p("The Stock Aging report currently calculates the Average COGS by looking at the last 12 months from the report date. The system finds the first month that has a COGS value within that window, then counts the number of months from that point to the current month. This count is used as the denominator (N).", { spaceAfter: 160 }),
+
+      calloutBox("Formula", [
+        { text: "Average COGS = Total COGS / N", bold: true, color: DK_BLUE },
+        { text: "    where N = number of months from first transaction in window to current month (span)", color: GRAY, break: 1 },
+      ], DK_BLUE, "E8EAF6"),
+
+      p("", { spaceAfter: 80 }),
+      p("For example, if the report date is April 2025 and the first COGS value appears in August 2024, the system counts 9 months (Aug to Apr) and divides the total by 9.", { spaceAfter: 80 }),
+
+      p("Key characteristics:", { bold: true, spaceAfter: 80 }),
+      p("Only considers data within the 12-month window", { bullet: true, spaceAfter: 60 }),
+      p("N is based on the span (distance) from the first transaction to the current month", { bullet: true, spaceAfter: 60 }),
+      p("Does not check whether the SKU existed before the window", { bullet: true, spaceAfter: 200 }),
+
+      // ========== SECTION 2: Proposed Approach ==========
+      separator(),
+      sectionHeader("Proposed Approach"),
+      p("", { spaceAfter: 80 }),
+
+      p("The proposed approach adds one extra step before calculating: it checks whether the SKU has any transaction history before the 12-month window (going back to 2018, the start of available data).", { spaceAfter: 160 }),
+
+      p([
+        { text: "If historical data exists ", bold: true },
+        { text: "(SKU has been sold before the window): " },
+        { text: "N = 12 immediately", bold: true, color: GREEN },
+        { text: ", regardless of how many months have actual COGS within the window." },
+      ], { bullet: true, spaceAfter: 80 }),
+
+      p([
+        { text: "If no historical data exists ", bold: true },
+        { text: "(truly new SKU, created within the last 12 months): " },
+        { text: "N = count of months with actual COGS values", bold: true, color: AMBER },
+        { text: "." },
+      ], { bullet: true, spaceAfter: 160 }),
+
+      p("The idea is that an existing or seasonal SKU should be averaged over a full 12-month period to reflect its true annual consumption rate, while a genuinely new SKU should only be divided by the months it has actually been available.", { spaceAfter: 200 }),
+
+      // ========== SECTION 3: Real Data Comparison ==========
+      separator(),
+      sectionHeader("Real Data Example: Article 11711000001 (Crocs)"),
+      p("", { spaceAfter: 80 }),
+
+      p([
+        { text: "Below is a real example using ", size: 22 },
+        { text: "Article 11711000001 (Crocs)", bold: true, color: DK_BLUE, size: 22 },
+        { text: " with report month ", size: 22 },
+        { text: "April 2025", bold: true, size: 22 },
+        { text: ". The 12-month window covers May 2024 through April 2025.", size: 22 },
+      ], { spaceAfter: 160 }),
+
+      // Monthly COGS Table
+      p("Monthly COGS within the Window", { bold: true, size: 20, color: DK_BLUE, spaceAfter: 80 }),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [1560, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780],
+        rows: [
+          new TableRow({
+            children: [
+              headerCell("Month", DK_BLUE, 1560),
+              headerCell("Aug", DK_BLUE, 780),
+              headerCell("Sep", DK_BLUE, 780),
+              headerCell("Oct", DK_BLUE, 780),
+              headerCell("Nov", DK_BLUE, 780),
+              headerCell("Dec", DK_BLUE, 780),
+              headerCell("Jan", DK_BLUE, 780),
+              headerCell("Feb", DK_BLUE, 780),
+              headerCell("Mar", DK_BLUE, 780),
+              headerCell("Apr", DK_BLUE, 780),
+              headerCell("Total", GREEN, 780),
+            ],
+          }),
+          new TableRow({
+            children: [
+              dataCell("COGS", { bold: true, align: AlignmentType.LEFT, width: 1560, fill: LT_GRAY }),
+              dataCell("749", { width: 780 }),
+              dataCell("204", { width: 780 }),
+              dataCell("477", { width: 780 }),
+              dataCell("1,226", { width: 780 }),
+              dataCell("545", { width: 780 }),
+              dataCell("273", { width: 780 }),
+              dataCell("-", { width: 780, color: LINE_GRAY }),
+              dataCell("136", { width: 780 }),
+              dataCell("68", { width: 780 }),
+              dataCell("3,679", { width: 780, bold: true, color: GREEN }),
+            ],
+          }),
+        ],
+      }),
+
+      p("", { spaceAfter: 60 }),
+      p([
+        { text: "Note: ", bold: true, color: GRAY, size: 18 },
+        { text: "May, Jun, Jul 2024 have no COGS (not shown). Feb 2025 also has no COGS. First value appears in Aug 2024.", color: GRAY, size: 18 },
+      ], { spaceAfter: 60 }),
+      p([
+        { text: "Important: ", bold: true, color: GRAY, size: 18 },
+        { text: "This article also has COGS data in Feb 2024, which falls outside the 12-month window.", color: GRAY, size: 18 },
+      ], { spaceAfter: 200 }),
+
+      // Comparison Table
+      p("Side-by-Side Comparison", { bold: true, size: 20, color: DK_BLUE, spaceAfter: 80 }),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [3120, 3120, 3120],
+        rows: [
+          new TableRow({
+            children: [
+              headerCell(""),
+              headerCell("Current Approach", "C62828"),
+              headerCell("Proposed Approach", GREEN),
+            ],
+          }),
+          new TableRow({
+            children: [
+              dataCell("Lookback Range", { bold: true, align: AlignmentType.LEFT, fill: LT_GRAY }),
+              dataCell("12 months only", {}),
+              dataCell("Checks full history (2018+),\nthen uses 12-month window", { size: 18 }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              dataCell("Historical Data Check", { bold: true, align: AlignmentType.LEFT, fill: LT_GRAY }),
+              dataCell("Not performed", {}),
+              dataCell("Finds data in Feb 2024\n(before the window)", { color: GREEN }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              dataCell("Denominator (N)", { bold: true, align: AlignmentType.LEFT, fill: LT_GRAY }),
+              dataCell("9\n(span: Aug\u2019 24 \u2013 Apr\u2019 25)", { bold: true, color: "C62828" }),
+              dataCell("12\n(has history \u2192 use full year)", { bold: true, color: GREEN }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              dataCell("Total COGS", { bold: true, align: AlignmentType.LEFT, fill: LT_GRAY }),
+              dataCell("3,679.02", {}),
+              dataCell("3,679.02", {}),
+            ],
+          }),
+          new TableRow({
+            children: [
+              dataCell("Average COGS", { bold: true, align: AlignmentType.LEFT, fill: LT_GRAY }),
+              dataCell("408.78", { bold: true, color: "C62828", size: 24 }),
+              dataCell("306.59", { bold: true, color: GREEN, size: 24 }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              dataCell("Difference", { bold: true, align: AlignmentType.LEFT, fill: LT_GRAY }),
+              new TableCell({
+                borders,
+                columnSpan: 2,
+                shading: { fill: "FFF8E1", type: ShadingType.CLEAR },
+                margins: { top: 60, bottom: 60, left: 100, right: 100 },
+                children: [new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [new TextRun({ text: "102.19 per unit  |  25% difference", font: "Calibri", size: 20, bold: true, color: AMBER })],
+                })],
+              }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              dataCell("Effect on Month Cover", { bold: true, align: AlignmentType.LEFT, fill: LT_GRAY }),
+              dataCell("Lower Month Cover\n(higher consumption rate)", { color: "C62828", size: 18 }),
+              dataCell("Higher Month Cover\n(lower consumption rate)", { color: GREEN, size: 18 }),
+            ],
+          }),
+        ],
+      }),
+
+      p("", { spaceAfter: 120 }),
+
+      calloutBox("Summary", [
+        { text: "Both approaches use the same COGS total (3,679.02) from the same 12-month window. ", color: "313131" },
+        { text: "The only difference is the denominator: ", color: "313131", break: 1 },
+        { text: "current approach uses 9 (span-based), while the proposed approach uses 12 (full year for existing SKUs). ", color: "313131", break: 1 },
+        { text: "This results in a 25% difference in the average and directly affects how stock aging is assessed.", color: "313131" },
+      ], BLUE, "E1F5FE"),
+
+      p("", { spaceAfter: 200 }),
+
+      // ========== SECTION 4: How It Works ==========
+      separator(),
+      sectionHeader("How the Proposed Logic Works"),
+      p("", { spaceAfter: 80 }),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [3120, 3120, 3120],
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                borders: noBorders,
+                width: { size: 3120, type: WidthType.DXA },
+                shading: { fill: DK_BLUE, type: ShadingType.CLEAR },
+                margins: { top: 120, bottom: 120, left: 100, right: 100 },
+                children: [
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: "Step 1", font: "Calibri", size: 16, color: LINE_GRAY })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Check history\n(back to 2018)", font: "Calibri", size: 22, bold: true, color: "FFFFFF" })] }),
+                ],
+              }),
+              new TableCell({
+                borders: noBorders,
+                width: { size: 3120, type: WidthType.DXA },
+                shading: { fill: BLUE, type: ShadingType.CLEAR },
+                margins: { top: 120, bottom: 120, left: 100, right: 100 },
+                children: [
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: "Step 2", font: "Calibri", size: 16, color: "B3E5FC" })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Has any data\nbefore the window?", font: "Calibri", size: 22, bold: true, color: "FFFFFF" })] }),
+                ],
+              }),
+              new TableCell({
+                borders: noBorders,
+                width: { size: 3120, type: WidthType.DXA },
+                shading: { fill: LT_GRAY, type: ShadingType.CLEAR },
+                margins: { top: 120, bottom: 120, left: 100, right: 100 },
+                children: [
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: "Step 3", font: "Calibri", size: 16, color: GRAY })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Assign\ndenominator (N)", font: "Calibri", size: 22, bold: true, color: "313131" })] }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+
+      p("", { spaceAfter: 80 }),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [4680, 4680],
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                borders: noBorders,
+                width: { size: 4680, type: WidthType.DXA },
+                shading: { fill: "E8F5E9", type: ShadingType.CLEAR },
+                margins: { top: 100, bottom: 100, left: 150, right: 150 },
+                children: [
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [new TextRun({ text: "YES \u2014 Has History", font: "Calibri", size: 22, bold: true, color: GREEN })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "N = 12", font: "Calibri", size: 24, bold: true, color: GREEN })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 40 }, children: [new TextRun({ text: "Existing or seasonal article", font: "Calibri", size: 18, color: GRAY })] }),
+                ],
+              }),
+              new TableCell({
+                borders: noBorders,
+                width: { size: 4680, type: WidthType.DXA },
+                shading: { fill: "FFF8E1", type: ShadingType.CLEAR },
+                margins: { top: 100, bottom: 100, left: 150, right: 150 },
+                children: [
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [new TextRun({ text: "NO \u2014 No History", font: "Calibri", size: 22, bold: true, color: AMBER })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "N = months with values", font: "Calibri", size: 24, bold: true, color: AMBER })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 40 }, children: [new TextRun({ text: "Genuinely new article", font: "Calibri", size: 18, color: GRAY })] }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+
+      p("", { spaceAfter: 200 }),
+
+      // ========== SECTION 5: What This Means ==========
+      separator(),
+      sectionHeader("What This Means"),
+      p("", { spaceAfter: 80 }),
+
+      p("If we move forward with the proposed approach, the following areas will need to be addressed:", { spaceAfter: 120 }),
+
+      p("The calculation logic in BigQuery will need to be updated", { bullet: true, spaceAfter: 60 }),
+      p("The data lookup will need to cover historical records going back to 2018", { bullet: true, spaceAfter: 60 }),
+      p("Testing will need to be re-run to validate results with the new formula", { bullet: true, spaceAfter: 60 }),
+      p("UAT results will change since average COGS values for existing SKUs will be different", { bullet: true, spaceAfter: 60 }),
+      p("Documentation will need to reflect the updated logic", { bullet: true, spaceAfter: 160 }),
+
+      calloutBox("Next Steps", [
+        { text: "We would like to walk through this comparison together and discuss whether the proposed approach should be adopted. ", color: "313131" },
+        { text: "Please let us know a convenient time for a short session.", color: "313131", break: 1 },
+      ], DK_BLUE, "E8EAF6"),
+
+      p("", { spaceAfter: 80 }),
+
+      // Attachment reference
+      p([
+        { text: "A detailed presentation is attached for reference: " },
+        { text: "COGS_Old_vs_New_Logic.pptx", bold: true, color: DK_BLUE },
+      ], { spaceAfter: 200 }),
+
+      // ========== CLOSING ==========
+      separator(),
+
+      p("Should you have any questions, please feel free to reach out.", { spaceAfter: 300 }),
+
+      p("Best regards,", { spaceAfter: 60 }),
+      p("[Your Name]", { bold: true, spaceAfter: 40 }),
+      p([
+        { text: "Deloitte Consulting", color: GREEN, size: 20 },
+        { text: "  |  CMG Unified Data Platform Project", color: GRAY, size: 20 },
+      ]),
+    ],
+  }],
+});
+
+Packer.toBuffer(doc).then(buffer => {
+  fs.writeFileSync("/home/user/Stock_FRS/CR_COGS_Calculation_Change_Email.docx", buffer);
+  console.log("Word document created successfully!");
+}).catch(err => console.error("Error:", err));

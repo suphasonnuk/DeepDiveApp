@@ -1,0 +1,39 @@
+{
+  "name": "@deepdive/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@deepdive/chains": "workspace:*",
+    "@deepdive/db": "workspace:*",
+    "@tanstack/react-query": "^5",
+    "@wagmi/connectors": "^5",
+    "@wagmi/core": "^2",
+    "dexie": "^4",
+    "jose": "^6",
+    "next": "^15",
+    "react": "^19",
+    "react-dom": "^19",
+    "viem": "^2",
+    "wagmi": "^2",
+    "zustand": "^5"
+  },
+  "devDependencies": {
+    "@deepdive/tsconfig": "workspace:*",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^15",
+    "postcss": "^8",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

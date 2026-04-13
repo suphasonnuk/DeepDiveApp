@@ -1,0 +1,35 @@
+{
+  "extends": "@deepdive/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@deepdive/crypto": [
+        "../../packages/crypto/src"
+      ],
+      "@deepdive/chains": [
+        "../../packages/chains/src"
+      ],
+      "@deepdive/db": [
+        "../../packages/db/src"
+      ],
+      "@deepdive/stores": [
+        "../../packages/stores/src"
+      ],
+      "@deepdive/ui": [
+        "../../packages/ui/src"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../../packages/*/src/**/*.ts",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
