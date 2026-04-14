@@ -35,6 +35,7 @@ export function TradeSignals() {
   const { address: userAddress, isConnected } = useAccount();
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "uncopied">("uncopied");
 
   useEffect(() => {
@@ -43,13 +44,20 @@ export function TradeSignals() {
 
   async function fetchTransactions() {
     setLoading(true);
+    setError(null);
     try {
       const url = `/api/transactions?limit=50&onlyUncopied=${filter === "uncopied"}`;
       const res = await fetch(url);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to load trades");
+      }
       const data = await res.json();
       setTransactions(data.transactions || []);
-    } catch (error) {
-      console.error("Failed to fetch transactions:", error);
+    } catch (err: any) {
+      console.error("Failed to fetch transactions:", err);
+      setError(err.message || "Failed to load trades");
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -94,6 +102,23 @@ export function TradeSignals() {
     return (
       <div className="text-center text-text-muted py-8">
         Loading trade signals...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-danger/30 bg-danger/5 p-6 text-center">
+        <p className="text-sm font-medium text-danger">
+          Could not load trades
+        </p>
+        <p className="mt-1 text-xs text-text-muted">{error}</p>
+        <button
+          onClick={fetchTransactions}
+          className="mt-3 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+        >
+          Retry
+        </button>
       </div>
     );
   }

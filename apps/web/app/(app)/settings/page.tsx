@@ -1,4 +1,3 @@
-import { WalletConnector } from "./components/WalletConnector";
 import { TrackedWallets } from "./components/TrackedWallets";
 import { SmartMoneyDiscovery } from "./components/SmartMoneyDiscovery";
 
@@ -7,13 +6,13 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-bold">Settings</h1>
 
-      {/* Wallet Connection */}
+      {/* Tracked Wallets for Copy Trading */}
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-text-secondary">
-          Your Wallet
+          Tracked Wallets (Copy Trading)
         </h2>
         <div className="rounded-xl border border-border bg-surface p-4">
-          <WalletConnector />
+          <TrackedWallets />
         </div>
       </div>
 
@@ -24,16 +23,6 @@ export default function SettingsPage() {
         </h2>
         <div className="rounded-xl border border-border bg-surface p-4">
           <SmartMoneyDiscovery />
-        </div>
-      </div>
-
-      {/* Tracked Wallets for Copy Trading */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-medium text-text-secondary">
-          Tracked Wallets (Copy Trading)
-        </h2>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <TrackedWallets />
         </div>
       </div>
 
