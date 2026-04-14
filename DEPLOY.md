@@ -27,8 +27,11 @@ Keep a text file open to paste values as you go. You need them in Step 3.
 Turso is the SQLite cloud database that stores wallets, transactions, and signals.
 
 ```powershell
-# Install Turso CLI (requires winget — built into Windows 10/11)
-winget install tursodatabase.turso
+# Install Scoop (if you don't have it — run in PowerShell)
+irm get.scoop.sh | iex
+
+# Install Turso CLI via Scoop
+scoop install turso
 
 # Restart PowerShell after install, then:
 
@@ -47,7 +50,7 @@ turso db tokens create deepdive-db
 # Example: eyJhbGci...
 ```
 
-> If winget isn't available, install Scoop first (`irm get.scoop.sh | iex`) then run `scoop install turso`.
+> **Alternative:** download `turso_windows_amd64.zip` from https://github.com/tursodatabase/turso-cli/releases/latest, extract `turso.exe`, and place it somewhere on your PATH.
 
 Save:
 - `TURSO_DATABASE_URL` = the URL from `--url`
