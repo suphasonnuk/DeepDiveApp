@@ -27,7 +27,10 @@ Keep a text file open to paste values as you go. You need them in Step 3.
 Turso is the SQLite cloud database that stores wallets, transactions, and signals.
 
 ```powershell
-# Install Scoop (if you don't have it — run in PowerShell)
+# Allow scripts to run (required once — safe, applies to your user only)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# Install Scoop (if you don't have it)
 irm get.scoop.sh | iex
 
 # Install Turso CLI via Scoop
