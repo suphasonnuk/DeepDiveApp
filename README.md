@@ -2,21 +2,11 @@
 
 Track profitable wallet addresses on-chain and replicate their trades with your approval.
 
-**🚀 Cloud Run Ready** — Deploy to GCP in 15 minutes.  
-📖 [QUICKSTART.md](QUICKSTART.md) | 📚 [Full Deployment Guide](DEPLOYMENT.md) | 🔧 [Troubleshooting](DEPLOY_TROUBLESHOOTING.md)
+**Deploy to GCP Cloud Run in ~20 minutes.**  
+See [DEPLOY.md](DEPLOY.md) for the full step-by-step guide including credential setup.
 
 ## Quick Deploy
 
-**Option 1: Automated Script**
-```bash
-# Linux/Mac
-./deploy.sh YOUR_PROJECT_ID
-
-# Windows PowerShell
-.\deploy.ps1 YOUR_PROJECT_ID
-```
-
-**Option 2: Cloud Build**
 ```bash
 gcloud builds submit --config=cloudbuild.yaml
 ```
@@ -188,22 +178,13 @@ services/quant-engine/ → Python FastAPI analytics
 
 ### GCP Cloud Run (Recommended)
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for full instructions.
+See [DEPLOY.md](DEPLOY.md) for the full guide (credentials + deploy + troubleshooting).
 
-Quick deploy:
-```bash
-gcloud builds submit --config=cloudbuild.yaml
-```
-
-Estimated cost: **$15-25/month** (pay only for actual usage)
+Estimated cost: **$12–23/month** (pay only for actual usage)
 
 ### Known Issues
 
-Local production builds fail due to libSQL native dependency bundling. This does not affect:
-- Development mode (`pnpm dev`) — **works perfectly**
-- Cloud deployments (GCP, Vercel) — **work correctly**
-
-See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for details.
+Local `pnpm build` fails due to libSQL native dependency bundling — this does **not** affect Cloud Run. Use `pnpm dev` locally. See Troubleshooting section in [DEPLOY.md](DEPLOY.md).
 
 ## Contributing
 
