@@ -24,11 +24,17 @@ const CHAIN_NAMES: Record<number, string> = {
 };
 
 const CHAIN_COLORS: Record<number, string> = {
-  1: "bg-blue-500/20 text-blue-400",
-  42161: "bg-sky-500/20 text-sky-400",
-  8453: "bg-indigo-500/20 text-indigo-400",
-  137: "bg-purple-500/20 text-purple-400",
+  1: "bg-accent/20 text-accent",
+  42161: "bg-success/20 text-success",
+  8453: "bg-warning/20 text-warning",
+  137: "bg-danger/20 text-danger",
 };
+
+function formatUsd(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
+  return value.toFixed(0);
+}
 
 export default function WalletsPage() {
   const [wallets, setWallets] = useState<TrackedWallet[]>([]);
@@ -183,18 +189,13 @@ export default function WalletsPage() {
                     {wallet.address.slice(0, 10)}...{wallet.address.slice(-8)}
                   </p>
                 </div>
-                <div className="text-right text-xs text-text-muted ml-3">
-                  {wallet.portfolioValueUsd != null && (
+                <div className="text-right text-xs text-text-muted ml-3 shrink-0">
+                  {wallet.portfolioValueUsd != null && Number(wallet.portfolioValueUsd) > 0 && (
                     <p className="text-sm font-medium text-text-primary">
-                      $
-                      {wallet.portfolioValueUsd >= 1000000
-                        ? `${(wallet.portfolioValueUsd / 1000000).toFixed(1)}M`
-                        : wallet.portfolioValueUsd >= 1000
-                          ? `${(wallet.portfolioValueUsd / 1000).toFixed(0)}K`
-                          : wallet.portfolioValueUsd.toFixed(0)}
+                      ${formatUsd(Number(wallet.portfolioValueUsd))}
                     </p>
                   )}
-                  {wallet.tradesLast30Days != null && (
+                  {wallet.tradesLast30Days != null && Number(wallet.tradesLast30Days) > 0 && (
                     <p>{wallet.tradesLast30Days} trades/30d</p>
                   )}
                 </div>

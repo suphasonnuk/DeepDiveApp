@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { TradeSignals } from "./components/TradeSignals";
+import { SignalCards } from "./components/SignalCards";
 
 export default function TradesPage() {
+  const [tab, setTab] = useState<"signals" | "trades">("signals");
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -55,7 +57,35 @@ export default function TradesPage() {
         </div>
       )}
 
-      <TradeSignals key={refreshKey} />
+      {/* Tab switcher: Signals vs Trade History */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab("signals")}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            tab === "signals"
+              ? "bg-accent text-white"
+              : "border border-border bg-surface text-text-secondary hover:border-accent/50"
+          }`}
+        >
+          Signals
+        </button>
+        <button
+          onClick={() => setTab("trades")}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            tab === "trades"
+              ? "bg-accent text-white"
+              : "border border-border bg-surface text-text-secondary hover:border-accent/50"
+          }`}
+        >
+          Trade History
+        </button>
+      </div>
+
+      {tab === "signals" ? (
+        <SignalCards key={`signals-${refreshKey}`} />
+      ) : (
+        <TradeSignals key={`trades-${refreshKey}`} />
+      )}
     </div>
   );
 }
