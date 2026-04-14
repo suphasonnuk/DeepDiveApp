@@ -26,52 +26,16 @@ Keep a text file open to paste values as you go. You need them in Step 3.
 
 Turso is the SQLite cloud database that stores wallets, transactions, and signals.
 
-```powershell
-# 1. Create a folder for the binary
-New-Item -ItemType Directory -Path "C:\tools\turso" -Force
+**Use the web dashboard (no CLI needed):**
 
-# 2. Download the latest Turso binary
-Invoke-WebRequest -Uri "https://github.com/tursodatabase/turso-cli/releases/latest/download/turso_windows_amd64.zip" `
-  -OutFile "$env:USERPROFILE\Downloads\turso_windows_amd64.zip"
-
-# 3. Extract it
-Expand-Archive -Path "$env:USERPROFILE\Downloads\turso_windows_amd64.zip" `
-  -DestinationPath "C:\tools\turso" -Force
-
-# 4. Add to PATH permanently (then restart PowerShell)
-[Environment]::SetEnvironmentVariable(
-  "PATH",
-  [Environment]::GetEnvironmentVariable("PATH", "User") + ";C:\tools\turso",
-  "User"
-)
-```
-
-**Restart PowerShell after the above**, then:
-
-```powershell
-# Verify install
-turso --version
-
-# Log in (opens browser)
-turso auth login
-
-# Create your database
-turso db create deepdive-db
-
-# Get the database URL — copy this output
-turso db show deepdive-db --url
-# Example: libsql://deepdive-db-yourname.turso.io
-
-# Generate an auth token — copy this output
-turso db tokens create deepdive-db
-# Example: eyJhbGci...
-```
-
-> If the download URL above doesn't work, find the latest release manually at https://github.com/tursodatabase/turso-cli/releases/latest and download `turso_windows_amd64.zip`.
+1. Sign up at https://app.turso.tech
+2. Click **Create Database** → name it `deepdive-db`, pick any region
+3. Click the database → find the **URL** (starts with `libsql://...`)
+4. Click **Generate Token** → copy the token
 
 Save:
-- `TURSO_DATABASE_URL` = the URL from `--url`
-- `TURSO_AUTH_TOKEN` = the token from `tokens create`
+- `TURSO_DATABASE_URL` = the `libsql://...` URL
+- `TURSO_AUTH_TOKEN` = the generated token
 
 ---
 
@@ -213,22 +177,42 @@ gcloud projects add-iam-policy-binding deepdive-app `
 
 ## Step 4 — Push Database Schema to Turso
 
-This creates the tables in your Turso database. Run from the project root:
+**4a. Install dependencies first (from project root):**
+
+```powershell
+pnpm install
+```
+
+**4b. Create `packages\db\.env` with your Turso credentials.**
+
+Create the file `packages\db\.env` (NOT `.env.example`) and paste:
+
+```
+TURSO_DATABASE_URL=libsql://your-db-url-here
+TURSO_AUTH_TOKEN=your-token-here
+```
+
+Replace with the actual values from Step 1A.
+
+**4c. Push the schema:**
 
 ```powershell
 cd packages\db
 pnpm db:push
 ```
 
-Expected output:
+Expected output — you should see tables being created:
 ```
-✓ Applying migrations...
-✓ 5 tables created
+[✓] Changes applied
+  Created table tracked_wallets
+  Created table wallet_transactions
+  Created table tokens
+  Created table token_prices
+  Created table copy_trades
+  Created table smart_money_signals
 ```
 
-Tables created: `copy_trades`, `smart_money_signals`, `token_prices`, `tokens`, `tracked_wallets`, `wallet_transactions`
-
-> If `pnpm db:push` fails, verify `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are set correctly in `packages\db\.env`.
+> If it says "No changes detected", the tables already exist — that's fine.
 
 ---
 
@@ -328,7 +312,7 @@ Open that URL in your browser.
 ## Step 8 — First Login
 
 1. Open your app URL
-2. **Create a passphrase** — this encrypts all your sensitive data locally (AES-256-GCM). Don't forget it.
+2. **Type any passphrase** — this becomes your login. It also derives an encryption key (AES-256-GCM) that protects sensitive data in your browser. **Remember it** — if you use a different passphrase next time, your encrypted local data won't decrypt.
 3. Go to **Settings** → connect your MetaMask wallet
 4. Click **Import Famous Wallets** to seed tracked wallets
 5. Click **Discover (ETH)** or **Discover (ARB)** to find top traders

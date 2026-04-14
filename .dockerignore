@@ -46,7 +46,6 @@ venv
 *.log
 .claude
 README.md
-DEPLOYMENT.md
-QUICKSTART.md
-KNOWN_ISSUES.md
+DEPLOY.md
+CLAUDE.md
 .github

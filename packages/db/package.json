@@ -6,8 +6,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:push": "drizzle-kit push --config=drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config=drizzle.config.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17",
@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@deepdive/tsconfig": "workspace:*",
+    "dotenv": "^16.4.0",
     "drizzle-kit": "^0.31",
     "typescript": "^5"
   }
