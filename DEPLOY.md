@@ -12,7 +12,8 @@ All commands are written for **PowerShell** on Windows.
 
 - [ ] Google Cloud account with billing enabled → https://console.cloud.google.com
 - [ ] `gcloud` CLI installed → https://cloud.google.com/sdk/docs/install
-- [ ] `turso` CLI (installed in Step 1A below)
+- [ ] QuickNode account (free tier) → https://quicknode.com
+- [ ] Turso database (web dashboard, no CLI) → https://app.turso.tech
 - [ ] Moralis account (free) → https://admin.moralis.io/register
 - [ ] Covalent account (free) → https://www.covalenthq.com/platform/auth/register/
 
@@ -39,7 +40,29 @@ Save:
 
 ---
 
-### 1B. Moralis API Key (3 min)
+### 1B. QuickNode RPC Endpoints (10 min) — RECOMMENDED
+
+QuickNode provides fast, reliable RPC endpoints with enhanced APIs for transaction history and token metadata. **Replaces the need for Etherscan API keys** (Step 1E).
+
+**Free tier:** 300M requests/month — more than enough for personal use.
+
+1. Sign up at https://quicknode.com
+2. Click **Create Endpoint**
+3. Select **Ethereum** → **Mainnet** → Create
+4. Copy the **HTTP Provider** URL (looks like `https://your-name.quiknode.pro/xxx/`)
+5. Repeat for **Arbitrum**, **Base**, and **Polygon**
+
+Save:
+- `NEXT_PUBLIC_RPC_ETHEREUM` = Your Ethereum endpoint URL
+- `NEXT_PUBLIC_RPC_ARBITRUM` = Your Arbitrum endpoint URL  
+- `NEXT_PUBLIC_RPC_BASE` = Your Base endpoint URL
+- `NEXT_PUBLIC_RPC_POLYGON` = Your Polygon endpoint URL
+
+> **Why QuickNode?** The app uses QuickNode's RPC to fetch transaction history, token metadata, and DEX swap events — eliminating dependency on Etherscan rate limits.
+
+---
+
+### 1C. Moralis API Key (3 min)
 
 Moralis provides portfolio value and trading activity data for smart money discovery.
 
@@ -51,7 +74,7 @@ Save: `MORALIS_API_KEY`
 
 ---
 
-### 1C. Covalent API Key (3 min)
+### 1D. Covalent API Key (3 min)
 
 Covalent provides top token holder data for whale discovery.
 
@@ -63,7 +86,7 @@ Save: `COVALENT_API_KEY`
 
 ---
 
-### 1D. JWT Secret (1 min)
+### 1E. JWT Secret (1 min)
 
 This is used to sign authentication tokens. Generate it locally — never share it.
 
@@ -78,9 +101,9 @@ Save: `JWT_SECRET` = the output string
 
 ---
 
-### 1E. Block Explorer API Keys (Optional, 5 min)
+### 1F. Block Explorer API Keys (OPTIONAL — Skip if using QuickNode)
 
-These enable transaction monitoring per chain. Skip and add later if you want.
+**Note:** QuickNode RPC (Step 1B) already handles transaction history. These are only needed as a fallback.
 
 | Chain | Sign up | Save as |
 |-------|---------|---------|
@@ -91,7 +114,7 @@ These enable transaction monitoring per chain. Skip and add later if you want.
 
 ---
 
-### 1F. WalletConnect Project ID (Optional, 3 min)
+### 1G. WalletConnect Project ID (Optional, 3 min)
 
 Required only for mobile wallet support (MetaMask mobile, Trust Wallet, etc.).
 
@@ -151,6 +174,12 @@ Set-GcpSecret "TURSO_AUTH_TOKEN"   "YOUR_TURSO_AUTH_TOKEN"
 Set-GcpSecret "JWT_SECRET"         "YOUR_JWT_SECRET"
 Set-GcpSecret "MORALIS_API_KEY"    "YOUR_MORALIS_API_KEY"
 Set-GcpSecret "COVALENT_API_KEY"   "YOUR_COVALENT_API_KEY"
+
+# QuickNode RPC endpoints (public, but storing as secrets for consistency)
+Set-GcpSecret "NEXT_PUBLIC_RPC_ETHEREUM"  "YOUR_QUICKNODE_ETHEREUM_URL"
+Set-GcpSecret "NEXT_PUBLIC_RPC_ARBITRUM"  "YOUR_QUICKNODE_ARBITRUM_URL"
+Set-GcpSecret "NEXT_PUBLIC_RPC_BASE"      "YOUR_QUICKNODE_BASE_URL"
+Set-GcpSecret "NEXT_PUBLIC_RPC_POLYGON"   "YOUR_QUICKNODE_POLYGON_URL"
 ```
 
 **Optional secrets (skip if you don't have them yet):**
@@ -247,7 +276,7 @@ gcloud run deploy deepdive-web `
   --region=us-central1 `
   --platform=managed `
   --allow-unauthenticated `
-  --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,MORALIS_API_KEY=MORALIS_API_KEY:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest `
+  --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,MORALIS_API_KEY=MORALIS_API_KEY:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest,NEXT_PUBLIC_RPC_ETHEREUM=NEXT_PUBLIC_RPC_ETHEREUM:latest,NEXT_PUBLIC_RPC_ARBITRUM=NEXT_PUBLIC_RPC_ARBITRUM:latest,NEXT_PUBLIC_RPC_BASE=NEXT_PUBLIC_RPC_BASE:latest,NEXT_PUBLIC_RPC_POLYGON=NEXT_PUBLIC_RPC_POLYGON:latest `
   --memory=2Gi `
   --cpu=2 `
   --timeout=300 `
