@@ -17,7 +17,7 @@ build
 .env
 .env.local
 .env*.local
-!.env.example
+.env.example
 
 # Git
 .git

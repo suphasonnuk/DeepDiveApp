@@ -27,8 +27,9 @@ export async function POST(request: NextRequest) {
   // In production, the client sends the pre-derived authKeyHex
   // For now, we compare against the stored hash
   const storedHash = process.env.AUTH_KEY_HASH;
+  const isPlaceholder = storedHash === "set-after-first-login-with-derived-auth-key-hex";
 
-  if (!storedHash) {
+  if (!storedHash || isPlaceholder) {
     // First-time setup mode: accept any passphrase
     // The user must set AUTH_KEY_HASH env var after initial setup
     console.warn(
