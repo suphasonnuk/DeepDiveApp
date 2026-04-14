@@ -27,16 +27,30 @@ Keep a text file open to paste values as you go. You need them in Step 3.
 Turso is the SQLite cloud database that stores wallets, transactions, and signals.
 
 ```powershell
-# Allow scripts to run (required once — safe, applies to your user only)
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+# 1. Create a folder for the binary
+New-Item -ItemType Directory -Path "C:\tools\turso" -Force
 
-# Install Scoop (if you don't have it)
-irm get.scoop.sh | iex
+# 2. Download the latest Turso binary
+Invoke-WebRequest -Uri "https://github.com/tursodatabase/turso-cli/releases/latest/download/turso_windows_amd64.zip" `
+  -OutFile "$env:USERPROFILE\Downloads\turso_windows_amd64.zip"
 
-# Install Turso CLI via Scoop
-scoop install turso
+# 3. Extract it
+Expand-Archive -Path "$env:USERPROFILE\Downloads\turso_windows_amd64.zip" `
+  -DestinationPath "C:\tools\turso" -Force
 
-# Restart PowerShell after install, then:
+# 4. Add to PATH permanently (then restart PowerShell)
+[Environment]::SetEnvironmentVariable(
+  "PATH",
+  [Environment]::GetEnvironmentVariable("PATH", "User") + ";C:\tools\turso",
+  "User"
+)
+```
+
+**Restart PowerShell after the above**, then:
+
+```powershell
+# Verify install
+turso --version
 
 # Log in (opens browser)
 turso auth login
@@ -53,7 +67,7 @@ turso db tokens create deepdive-db
 # Example: eyJhbGci...
 ```
 
-> **Alternative:** download `turso_windows_amd64.zip` from https://github.com/tursodatabase/turso-cli/releases/latest, extract `turso.exe`, and place it somewhere on your PATH.
+> If the download URL above doesn't work, find the latest release manually at https://github.com/tursodatabase/turso-cli/releases/latest and download `turso_windows_amd64.zip`.
 
 Save:
 - `TURSO_DATABASE_URL` = the URL from `--url`
