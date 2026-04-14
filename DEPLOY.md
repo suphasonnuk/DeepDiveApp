@@ -1,6 +1,7 @@
-# DeepDiveApp — Deployment Guide
+# DeepDiveApp — Deployment Guide (Windows / PowerShell)
 
-Follow these steps **top to bottom**. Each step must complete before the next.
+Follow these steps **top to bottom**. Each step must complete before the next.  
+All commands are written for **PowerShell** on Windows.
 
 **Time to deploy:** ~20 minutes  
 **Cost:** ~$12–23/month (pay-per-request, free tier covers most personal use)
@@ -11,7 +12,7 @@ Follow these steps **top to bottom**. Each step must complete before the next.
 
 - [ ] Google Cloud account with billing enabled → https://console.cloud.google.com
 - [ ] `gcloud` CLI installed → https://cloud.google.com/sdk/docs/install
-- [ ] `turso` CLI (installed in Step 1)
+- [ ] `turso` CLI (installed in Step 1A below)
 - [ ] Moralis account (free) → https://admin.moralis.io/register
 - [ ] Covalent account (free) → https://www.covalenthq.com/platform/auth/register/
 
@@ -25,9 +26,11 @@ Keep a text file open to paste values as you go. You need them in Step 3.
 
 Turso is the SQLite cloud database that stores wallets, transactions, and signals.
 
-```bash
-# Install Turso CLI
-curl -sSfL https://get.tur.so/install.sh | bash
+```powershell
+# Install Turso CLI (requires winget — built into Windows 10/11)
+winget install tursodatabase.turso
+
+# Restart PowerShell after install, then:
 
 # Log in (opens browser)
 turso auth login
@@ -35,14 +38,16 @@ turso auth login
 # Create your database
 turso db create deepdive-db
 
-# Get the database URL — copy this
+# Get the database URL — copy this output
 turso db show deepdive-db --url
-# Example output: libsql://deepdive-db-yourname.turso.io
+# Example: libsql://deepdive-db-yourname.turso.io
 
-# Generate an auth token — copy this
+# Generate an auth token — copy this output
 turso db tokens create deepdive-db
-# Example output: eyJhbGci...
+# Example: eyJhbGci...
 ```
+
+> If winget isn't available, install Scoop first (`irm get.scoop.sh | iex`) then run `scoop install turso`.
 
 Save:
 - `TURSO_DATABASE_URL` = the URL from `--url`
@@ -78,8 +83,11 @@ Save: `COVALENT_API_KEY`
 
 This is used to sign authentication tokens. Generate it locally — never share it.
 
-```bash
-openssl rand -hex 32
+```powershell
+# Run this in PowerShell — outputs a 64-character hex string
+[System.BitConverter]::ToString(
+    [System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)
+).Replace('-','').ToLower()
 ```
 
 Save: `JWT_SECRET` = the output string
@@ -113,7 +121,7 @@ Save: `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
 
 ## Step 2 — Set Up Google Cloud Project
 
-```bash
+```powershell
 # Verify gcloud is installed
 gcloud --version
 
@@ -126,49 +134,58 @@ gcloud projects create deepdive-app --name="DeepDive App"
 # Set it as the active project
 gcloud config set project deepdive-app
 
-# Enable the required GCP services
-gcloud services enable \
-  cloudbuild.googleapis.com \
-  run.googleapis.com \
-  secretmanager.googleapis.com \
+# Enable the required GCP services (backtick ` is PowerShell's line continuation)
+gcloud services enable `
+  cloudbuild.googleapis.com `
+  run.googleapis.com `
+  secretmanager.googleapis.com `
   containerregistry.googleapis.com
 ```
 
-> If `deepdive-app` is taken as a project ID, try `deepdive-app-yourname` and use that ID everywhere below.
+> If `deepdive-app` is already taken as a project ID, try `deepdive-app-yourname` and use that ID everywhere below.
 
 ---
 
 ## Step 3 — Store Secrets in GCP Secret Manager
 
-Replace each `YOUR_*` with the actual values you saved in Step 1.
+**First, paste this helper function into PowerShell** (run once per session — it handles the temp-file trick that Windows needs to pipe values cleanly to gcloud):
 
-**Required secrets (do these first):**
+```powershell
+function Set-GcpSecret($Name, $Value) {
+    $tmp = [System.IO.Path]::GetTempFileName()
+    [System.IO.File]::WriteAllText($tmp, $Value)
+    gcloud secrets create $Name --data-file=$tmp
+    Remove-Item $tmp
+}
+```
 
-```bash
-echo -n "YOUR_TURSO_DATABASE_URL" | gcloud secrets create TURSO_DATABASE_URL --data-file=-
-echo -n "YOUR_TURSO_AUTH_TOKEN"   | gcloud secrets create TURSO_AUTH_TOKEN   --data-file=-
-echo -n "YOUR_JWT_SECRET"         | gcloud secrets create JWT_SECRET          --data-file=-
-echo -n "YOUR_MORALIS_API_KEY"    | gcloud secrets create MORALIS_API_KEY     --data-file=-
-echo -n "YOUR_COVALENT_API_KEY"   | gcloud secrets create COVALENT_API_KEY    --data-file=-
+**Required secrets — replace each `YOUR_*` with your actual values:**
+
+```powershell
+Set-GcpSecret "TURSO_DATABASE_URL" "YOUR_TURSO_DATABASE_URL"
+Set-GcpSecret "TURSO_AUTH_TOKEN"   "YOUR_TURSO_AUTH_TOKEN"
+Set-GcpSecret "JWT_SECRET"         "YOUR_JWT_SECRET"
+Set-GcpSecret "MORALIS_API_KEY"    "YOUR_MORALIS_API_KEY"
+Set-GcpSecret "COVALENT_API_KEY"   "YOUR_COVALENT_API_KEY"
 ```
 
 **Optional secrets (skip if you don't have them yet):**
 
-```bash
-echo -n "YOUR_ETHERSCAN_API_KEY"   | gcloud secrets create ETHERSCAN_API_KEY   --data-file=-
-echo -n "YOUR_ARBISCAN_API_KEY"    | gcloud secrets create ARBISCAN_API_KEY    --data-file=-
-echo -n "YOUR_BASESCAN_API_KEY"    | gcloud secrets create BASESCAN_API_KEY    --data-file=-
-echo -n "YOUR_POLYGONSCAN_API_KEY" | gcloud secrets create POLYGONSCAN_API_KEY --data-file=-
-echo -n "YOUR_WALLETCONNECT_ID"    | gcloud secrets create WALLETCONNECT_PROJECT_ID --data-file=-
+```powershell
+Set-GcpSecret "ETHERSCAN_API_KEY"        "YOUR_ETHERSCAN_API_KEY"
+Set-GcpSecret "ARBISCAN_API_KEY"         "YOUR_ARBISCAN_API_KEY"
+Set-GcpSecret "BASESCAN_API_KEY"         "YOUR_BASESCAN_API_KEY"
+Set-GcpSecret "POLYGONSCAN_API_KEY"      "YOUR_POLYGONSCAN_API_KEY"
+Set-GcpSecret "WALLETCONNECT_PROJECT_ID" "YOUR_WALLETCONNECT_ID"
 ```
 
 **Grant Cloud Run permission to read secrets:**
 
-```bash
-PROJECT_NUMBER=$(gcloud projects describe deepdive-app --format="value(projectNumber)")
+```powershell
+$PROJECT_NUMBER = gcloud projects describe deepdive-app --format="value(projectNumber)"
 
-gcloud projects add-iam-policy-binding deepdive-app \
-  --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com \
+gcloud projects add-iam-policy-binding deepdive-app `
+  --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" `
   --role=roles/secretmanager.secretAccessor
 ```
 
@@ -178,8 +195,8 @@ gcloud projects add-iam-policy-binding deepdive-app \
 
 This creates the tables in your Turso database. Run from the project root:
 
-```bash
-cd packages/db
+```powershell
+cd packages\db
 pnpm db:push
 ```
 
@@ -191,28 +208,28 @@ Expected output:
 
 Tables created: `copy_trades`, `smart_money_signals`, `token_prices`, `tokens`, `tracked_wallets`, `wallet_transactions`
 
-> If `pnpm db:push` fails, verify `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are set correctly in `packages/db/.env`.
+> If `pnpm db:push` fails, verify `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are set correctly in `packages\db\.env`.
 
 ---
 
 ## Step 5 — Deploy the Web App
 
-From the project root (`/home/user/DeepDiveApp`):
+From the project root:
 
-```bash
+```powershell
 gcloud builds submit --config=cloudbuild.yaml
 ```
 
 This builds a Docker image, pushes it to GCP Container Registry, and deploys to Cloud Run. **Wait 5–10 minutes.**
 
 Watch the build:
-```bash
+```powershell
 gcloud builds list --limit=3
 ```
 
 **If Cloud Build fails** — deploy manually instead:
 
-```bash
+```powershell
 # Authenticate Docker with GCP
 gcloud auth configure-docker
 
@@ -221,17 +238,17 @@ docker build -t gcr.io/deepdive-app/deepdive-web:latest .
 docker push gcr.io/deepdive-app/deepdive-web:latest
 
 # Deploy to Cloud Run (required secrets only)
-gcloud run deploy deepdive-web \
-  --image=gcr.io/deepdive-app/deepdive-web:latest \
-  --region=us-central1 \
-  --platform=managed \
-  --allow-unauthenticated \
-  --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,MORALIS_API_KEY=MORALIS_API_KEY:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest \
-  --memory=2Gi \
-  --cpu=2 \
-  --timeout=300 \
-  --max-instances=10 \
-  --min-instances=0 \
+gcloud run deploy deepdive-web `
+  --image=gcr.io/deepdive-app/deepdive-web:latest `
+  --region=us-central1 `
+  --platform=managed `
+  --allow-unauthenticated `
+  --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,MORALIS_API_KEY=MORALIS_API_KEY:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest `
+  --memory=2Gi `
+  --cpu=2 `
+  --timeout=300 `
+  --max-instances=10 `
+  --min-instances=0 `
   --port=8080
 ```
 
@@ -241,34 +258,34 @@ gcloud run deploy deepdive-web \
 
 The quant engine analyzes wallet performance and generates trade signals. Skip this on first deploy — the web app works without it.
 
-```bash
-cd services/quant-engine
+```powershell
+cd services\quant-engine
 
-gcloud run deploy deepdive-quant-engine \
-  --source=. \
-  --region=us-central1 \
-  --platform=managed \
-  --allow-unauthenticated \
-  --memory=1Gi \
-  --cpu=2 \
-  --timeout=600 \
-  --max-instances=5 \
+gcloud run deploy deepdive-quant-engine `
+  --source=. `
+  --region=us-central1 `
+  --platform=managed `
+  --allow-unauthenticated `
+  --memory=1Gi `
+  --cpu=2 `
+  --timeout=600 `
+  --max-instances=5 `
   --min-instances=0
 ```
 
 Then wire it up to the web app:
 
-```bash
+```powershell
 # Get quant engine URL
-QUANT_URL=$(gcloud run services describe deepdive-quant-engine \
-  --region=us-central1 --format='value(status.url)')
+$QUANT_URL = gcloud run services describe deepdive-quant-engine `
+  --region=us-central1 --format="value(status.url)"
 
-# Store it as a secret
-echo -n "$QUANT_URL" | gcloud secrets create QUANT_ENGINE_URL --data-file=-
+# Store it as a secret (reuse the helper from Step 3)
+Set-GcpSecret "QUANT_ENGINE_URL" $QUANT_URL
 
 # Update web app to use it
-gcloud run services update deepdive-web \
-  --region=us-central1 \
+gcloud run services update deepdive-web `
+  --region=us-central1 `
   --update-secrets=QUANT_ENGINE_URL=QUANT_ENGINE_URL:latest
 ```
 
@@ -276,10 +293,10 @@ gcloud run services update deepdive-web \
 
 ## Step 7 — Get Your App URL
 
-```bash
-gcloud run services describe deepdive-web \
-  --region=us-central1 \
-  --format='value(status.url)'
+```powershell
+gcloud run services describe deepdive-web `
+  --region=us-central1 `
+  --format="value(status.url)"
 ```
 
 Output looks like: `https://deepdive-web-abc123-uc.a.run.app`
@@ -303,7 +320,7 @@ Open that URL in your browser.
 
 After making code changes locally:
 
-```bash
+```powershell
 git add -A
 git commit -m "your changes"
 git push origin main
@@ -314,11 +331,11 @@ gcloud builds submit --config=cloudbuild.yaml
 
 **Or set up auto-deploy on every push to main:**
 
-```bash
-gcloud builds triggers create github \
-  --repo-name=DeepDiveApp \
-  --repo-owner=suphasonnuk \
-  --branch-pattern=^main$ \
+```powershell
+gcloud builds triggers create github `
+  --repo-name=DeepDiveApp `
+  --repo-owner=suphasonnuk `
+  --branch-pattern=^main$ `
   --build-config=cloudbuild.yaml
 ```
 
@@ -328,9 +345,9 @@ gcloud builds triggers create github \
 
 After creating the secrets in Step 1E/1F, add them to the running service:
 
-```bash
-gcloud run services update deepdive-web \
-  --region=us-central1 \
+```powershell
+gcloud run services update deepdive-web `
+  --region=us-central1 `
   --update-secrets=ETHERSCAN_API_KEY=ETHERSCAN_API_KEY:latest
 ```
 
@@ -341,8 +358,7 @@ Repeat for each key you want to add.
 ## Troubleshooting
 
 ### Build fails with timeout
-```bash
-# Check what went wrong
+```powershell
 gcloud builds list --limit=5
 gcloud builds log BUILD_ID
 ```
@@ -351,32 +367,32 @@ Fix: edit `cloudbuild.yaml`, set `machineType: 'E2_HIGHCPU_8'` and `timeout: '18
 ### "Secret does not exist" error
 You tried to mount a secret that wasn't created. Only mount secrets you've actually created. Use the minimal `--set-secrets` list in the manual deploy command (Step 5).
 
-### Service won't start (code 137 = out of memory)
-```bash
+### Service won't start (exit code 137 = out of memory)
+```powershell
 gcloud run services update deepdive-web --region=us-central1 --memory=4Gi
 ```
 
 ### Permission denied accessing secrets
-```bash
-PROJECT_NUMBER=$(gcloud projects describe deepdive-app --format="value(projectNumber)")
-gcloud projects add-iam-policy-binding deepdive-app \
-  --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com \
+```powershell
+$PROJECT_NUMBER = gcloud projects describe deepdive-app --format="value(projectNumber)"
+
+gcloud projects add-iam-policy-binding deepdive-app `
+  --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" `
   --role=roles/secretmanager.secretAccessor
 ```
 
 ### Database connection error
-```bash
-# Test your Turso connection
+```powershell
 turso db shell deepdive-db
 .tables
 # Should show: copy_trades, smart_money_signals, token_prices, tokens, tracked_wallets, wallet_transactions
 ```
 
 ### Local `pnpm build` fails (libSQL webpack error)
-This is a known non-blocking issue. The local production build fails because webpack tries to bundle README/LICENSE files from the libSQL native package. This does **not** affect Cloud Run deployments — GCP handles native dependencies correctly. Use `pnpm dev` for local testing.
+Known non-blocking issue. The local production build fails because webpack tries to bundle README/LICENSE files from the libSQL native package. This does **not** affect Cloud Run — GCP handles native dependencies correctly. Use `pnpm dev` for local testing.
 
 ### View live logs
-```bash
+```powershell
 gcloud run services logs tail deepdive-web --region=us-central1
 ```
 
@@ -384,7 +400,7 @@ gcloud run services logs tail deepdive-web --region=us-central1
 
 ## Useful Commands
 
-```bash
+```powershell
 # View all deployed services
 gcloud run services list
 
@@ -394,14 +410,22 @@ gcloud run services describe deepdive-web --region=us-central1
 # View recent logs
 gcloud run services logs read deepdive-web --region=us-central1 --limit=100
 
-# Update a secret value
-echo -n "NEW_VALUE" | gcloud secrets versions add SECRET_NAME --data-file=-
+# Update a secret value (reuse helper from Step 3)
+function Update-GcpSecret($Name, $Value) {
+    $tmp = [System.IO.Path]::GetTempFileName()
+    [System.IO.File]::WriteAllText($tmp, $Value)
+    gcloud secrets versions add $Name --data-file=$tmp
+    Remove-Item $tmp
+}
+Update-GcpSecret "SECRET_NAME" "NEW_VALUE"
 
 # Scale to zero (pause billing)
 gcloud run services update deepdive-web --region=us-central1 --min-instances=0
 
 # Force a restart (new revision)
-gcloud run services update deepdive-web --region=us-central1 --revision-suffix=$(date +%s)
+gcloud run services update deepdive-web `
+  --region=us-central1 `
+  --revision-suffix=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
 
 # Delete service
 gcloud run services delete deepdive-web --region=us-central1
