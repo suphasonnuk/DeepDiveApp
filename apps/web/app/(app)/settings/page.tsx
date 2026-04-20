@@ -1,38 +1,52 @@
-import { TrackedWallets } from "./components/TrackedWallets";
-import { SmartMoneyDiscovery } from "./components/SmartMoneyDiscovery";
+import { WalletConnector } from "./components/WalletConnector";
 
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold">Settings</h1>
 
-      {/* Tracked Wallets for Copy Trading */}
+      {/* Wallet Connection */}
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-text-secondary">
-          Tracked Wallets (Copy Trading)
-        </h2>
+        <h2 className="text-sm font-medium text-text-secondary">Wallet</h2>
         <div className="rounded-xl border border-border bg-surface p-4">
-          <TrackedWallets />
+          <WalletConnector />
         </div>
       </div>
 
-      {/* Smart Money Discovery */}
+      {/* Quant Engine Config */}
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-text-secondary">
-          Smart Money Discovery
-        </h2>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <SmartMoneyDiscovery />
-        </div>
-      </div>
-
-      {/* Other Settings */}
-      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-text-secondary">Quant Engine</h2>
         {[
-          { title: "Chain RPCs", desc: "Configure RPC endpoints" },
-          { title: "Strategies", desc: "Quant model parameters" },
-          { title: "Security", desc: "Passphrase & session settings" },
-          { title: "Data", desc: "Export & backup" },
+          {
+            title: "Signal Models",
+            desc: "Kalman Filter · Ornstein-Uhlenbeck · HMM · Kelly Criterion",
+          },
+          {
+            title: "Price Data",
+            desc: "Binance public API · CoinGecko free tier",
+          },
+          {
+            title: "Paper Trading",
+            desc: "All trades are simulated — no real execution",
+          },
+        ].map((item) => (
+          <div
+            key={item.title}
+            className="rounded-xl border border-border bg-surface p-4"
+          >
+            <p className="font-medium">{item.title}</p>
+            <p className="mt-0.5 text-sm text-text-secondary">{item.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Security & Data */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-text-secondary">Security & Data</h2>
+        {[
+          { title: "Session", desc: "Passphrase-based JWT · 1 hour expiry" },
+          { title: "Encryption", desc: "AES-256-GCM · PBKDF2 600k iterations · IndexedDB" },
+          { title: "Privacy", desc: "Portfolio data never sent to server" },
         ].map((item) => (
           <div
             key={item.title}
@@ -42,7 +56,6 @@ export default function SettingsPage() {
               <p className="font-medium">{item.title}</p>
               <p className="mt-0.5 text-sm text-text-secondary">{item.desc}</p>
             </div>
-            <span className="text-text-muted">&rarr;</span>
           </div>
         ))}
       </div>

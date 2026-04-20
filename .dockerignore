@@ -49,3 +49,7 @@ README.md
 DEPLOY.md
 CLAUDE.md
 .github
+*.tsbuildinfo
+
+# Python services — not needed for web image build context
+services/

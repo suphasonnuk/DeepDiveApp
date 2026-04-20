@@ -1,26 +1,23 @@
+import os
+import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime
-import os
+from typing import Optional
 from dotenv import load_dotenv
 
-from app.models.whale_signals import (
-    WhaleTransaction,
-    WhaleSignal,
-    analyze_whale_activity,
-)
+from app.data.fetchers import fetch_prices
+from app.signals.generator import SignalGenerator
+from app.performance.tracker import PaperTradeTracker
 
 load_dotenv()
 
 app = FastAPI(
     title="DeepDive Quant Engine",
-    description="Quantitative analysis engine for copy trading",
-    version="0.1.0",
+    description="Mathematical quant signals: Kalman Filter + Ornstein-Uhlenbeck + HMM + Kelly Criterion",
+    version="2.0.0",
 )
 
-# CORS middleware for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
@@ -29,151 +26,130 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Pydantic models
-class WalletAddress(BaseModel):
-    address: str
-    chainId: int
+signal_generator = SignalGenerator()
+paper_tracker = PaperTradeTracker()
 
 
-class WalletPerformance(BaseModel):
-    address: str
-    totalTrades: int
-    winRate: float  # Percentage
-    avgProfitPercent: float
-    sharpeRatio: Optional[float] = None
-    maxDrawdown: Optional[float] = None
-    profitFactor: Optional[float] = None
+# ── Request / Response models ──────────────────────────────────────────────
+
+class SignalRequest(BaseModel):
+    symbol: str
+    coingecko_id: Optional[str] = None
+    prices: Optional[list[float]] = None   # optional: caller can pass prices directly
 
 
-class CopyTradeSignal(BaseModel):
-    walletAddress: str
-    tokenIn: str
-    tokenOut: str
-    amountIn: str
-    confidence: float  # 0-1 score
-    reasoning: str
+class BatchSignalRequest(BaseModel):
+    tokens: list[SignalRequest]
 
+
+class OpenTradeRequest(BaseModel):
+    symbol: str
+    signal: str
+    entry_price: float
+    position_size_fraction: float
+    target_price: float
+    stop_price: float
+    confidence: float
+    regime: str
+
+
+class CloseTradeRequest(BaseModel):
+    exit_price: float
+
+
+# ── Endpoints ──────────────────────────────────────────────────────────────
 
 @app.get("/")
-def read_root():
+def root():
     return {
         "name": "DeepDive Quant Engine",
+        "version": "2.0.0",
+        "models": ["kalman_filter", "ornstein_uhlenbeck", "hmm_regime", "kelly_criterion"],
         "status": "online",
-        "version": "0.1.0",
     }
 
 
 @app.get("/health")
-def health_check():
+def health():
     return {"status": "healthy"}
 
 
-@app.post("/api/v1/analyze-wallet", response_model=WalletPerformance)
-async def analyze_wallet(wallet: WalletAddress):
-    """
-    Analyze the historical performance of a wallet address
-    Returns win rate, profit metrics, and risk-adjusted returns
-    """
-    # TODO: Implement wallet analysis logic
-    # - Fetch historical trades from the database
-    # - Calculate win rate (profitable vs unprofitable trades)
-    # - Calculate Sharpe ratio, max drawdown, profit factor
-    # - Return performance metrics
+@app.post("/api/v1/signal")
+async def generate_signal(req: SignalRequest):
+    """Generate a full quant signal for a single token."""
+    if req.prices and len(req.prices) >= 30:
+        prices = np.array(req.prices, dtype=float)
+        current_price = req.prices[-1]
+    else:
+        data = await fetch_prices(req.symbol, req.coingecko_id)
+        if not data["success"]:
+            raise HTTPException(status_code=422, detail=data["reason"])
+        prices = data["prices"]
+        current_price = data["current_price"]
 
-    # Placeholder response
-    return WalletPerformance(
-        address=wallet.address,
-        totalTrades=0,
-        winRate=0.0,
-        avgProfitPercent=0.0,
-        sharpeRatio=None,
-        maxDrawdown=None,
-        profitFactor=None,
+    return signal_generator.generate(req.symbol, prices, float(current_price))
+
+
+@app.post("/api/v1/signals/batch")
+async def generate_signals_batch(req: BatchSignalRequest):
+    """Generate signals for multiple tokens (portfolio scan)."""
+    results = []
+    for token_req in req.tokens:
+        try:
+            signal = await generate_signal(token_req)
+            results.append(signal)
+        except HTTPException as e:
+            results.append({"symbol": token_req.symbol, "error": e.detail, "signal": "HOLD"})
+        except Exception as e:
+            results.append({"symbol": token_req.symbol, "error": str(e), "signal": "HOLD"})
+    return results
+
+
+@app.post("/api/v1/paper-trades", status_code=201)
+def open_paper_trade(req: OpenTradeRequest):
+    """Record a new paper trade triggered by a signal."""
+    trade = paper_tracker.open_trade(
+        symbol=req.symbol,
+        signal=req.signal,
+        entry_price=req.entry_price,
+        position_size=req.position_size_fraction,
+        target_price=req.target_price,
+        stop_price=req.stop_price,
+        confidence=req.confidence,
+        regime=req.regime,
     )
+    return trade
 
 
-@app.post("/api/v1/signals", response_model=List[CopyTradeSignal])
-async def generate_signals(wallets: List[WalletAddress]):
-    """
-    Generate copy trade signals based on tracked wallet activity
-    Returns a list of recommended trades to copy
-    """
-    # TODO: Implement signal generation logic
-    # - Monitor recent transactions from tracked wallets
-    # - Apply filters (min confidence, min wallet performance)
-    # - Rank signals by wallet performance + signal strength
-    # - Return top signals
-
-    # Placeholder response
-    return []
+@app.get("/api/v1/paper-trades")
+def list_paper_trades(status: Optional[str] = None):
+    """List all paper trades, optionally filtered by status."""
+    return paper_tracker.list_trades(status=status)
 
 
-@app.post("/api/v1/backtest")
-async def backtest_strategy(
-    walletAddress: str,
-    startDate: str,
-    endDate: str,
-    initialCapital: float = 10000.0,
-):
-    """
-    Backtest a copy trading strategy for a specific wallet
-    Returns hypothetical performance if all trades were copied
-    """
-    # TODO: Implement backtesting logic
-    # - Fetch all wallet trades in date range
-    # - Simulate copying each trade with slippage/fees
-    # - Calculate cumulative returns, drawdowns
-    # - Return backtest results
-
-    return {
-        "wallet": walletAddress,
-        "startDate": startDate,
-        "endDate": endDate,
-        "initialCapital": initialCapital,
-        "finalValue": initialCapital,  # Placeholder
-        "totalReturn": 0.0,
-        "sharpeRatio": 0.0,
-        "maxDrawdown": 0.0,
-        "trades": 0,
-    }
+@app.get("/api/v1/paper-trades/{trade_id}")
+def get_paper_trade(trade_id: str):
+    trade = paper_tracker.get_trade(trade_id)
+    if not trade:
+        raise HTTPException(status_code=404, detail="trade not found")
+    return trade
 
 
-class WhaleActivityRequest(BaseModel):
-    """Request body for whale signal analysis"""
+@app.put("/api/v1/paper-trades/{trade_id}/close")
+def close_paper_trade(trade_id: str, req: CloseTradeRequest):
+    """Close a paper trade and calculate P&L."""
+    trade = paper_tracker.close_trade(trade_id, req.exit_price)
+    if not trade:
+        raise HTTPException(status_code=404, detail="trade not found or already closed")
+    return trade
 
-    tokenAddress: str
-    chainId: int
-    buyTransactions: List[WhaleTransaction]
-    sellTransactions: List[WhaleTransaction]
-    timeWindowHours: int = 24
 
-
-@app.post("/api/v1/whale-signals", response_model=Optional[WhaleSignal])
-async def analyze_whale_signals(request: WhaleActivityRequest):
-    """
-    Analyze whale activity for a specific token.
-
-    Detects accumulation/distribution patterns when multiple whales
-    buy or sell the same token within a time window.
-
-    Returns:
-        WhaleSignal if significant pattern detected, None otherwise
-    """
-    try:
-        signal = analyze_whale_activity(
-            buy_transactions=request.buyTransactions,
-            sell_transactions=request.sellTransactions,
-            time_window_hours=request.timeWindowHours,
-        )
-
-        return signal
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Signal analysis failed: {str(e)}")
+@app.get("/api/v1/performance")
+def get_performance():
+    """Aggregate performance metrics: win rate, Sharpe, max drawdown, equity curve."""
+    return paper_tracker.get_metrics()
 
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+
+  // Required for monorepo standalone builds: trace files from the repo root
+  // so workspace packages (packages/db, packages/crypto, etc.) are included.
+  outputFileTracingRoot: path.join(__dirname, "../../"),
+
   transpilePackages: [
     "@deepdive/crypto",
     "@deepdive/chains",
