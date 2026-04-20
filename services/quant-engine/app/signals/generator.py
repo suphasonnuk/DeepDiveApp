@@ -56,7 +56,13 @@ class SignalGenerator:
         k_score = _SIGNAL_SCORE.get(kalman_sig["signal"], 0) * kalman_sig["confidence"]
         o_score = _SIGNAL_SCORE.get(ou_sig["signal"], 0) * ou_sig["confidence"]
         combined_score = weights["kalman"] * k_score + weights["ou"] * o_score
-        combined_confidence = weights["kalman"] * kalman_sig["confidence"] + weights["ou"] * ou_sig["confidence"]
+
+        # Alignment-aware confidence: opposing signals cancel in the score, so |combined_score|
+        # reflects how strongly and consistently the models agree on direction.
+        # Mapped to P(win) ∈ [0.5, 1.0]: zero alignment = coin flip, full agreement = 1.0.
+        alignment = abs(combined_score)
+        combined_confidence = round(alignment, 4)       # display metric [0, 1]
+        win_probability = 0.5 + 0.5 * alignment         # Kelly input [0.5, 1.0]
 
         # --- 4. Final signal ---
         if combined_score > _BUY_THRESHOLD:
@@ -66,13 +72,26 @@ class SignalGenerator:
         else:
             final_signal = "HOLD"
 
-        # --- 5. Risk levels (derived from OU equilibrium std) ---
+        # --- 5. Risk levels ---
         ou_sigma_eq = self.ou.sigma_eq if self.ou.sigma_eq > 0 else current_price * 0.03
         z = ou_sig.get("z_score", 0.0) or 0.0
-        target_pct = min(abs(z) * ou_sigma_eq / (current_price + 1e-12), 0.30) if z else 0.05
-        stop_pct = ou_sigma_eq / (current_price + 1e-12) * 1.5
-        target_pct = max(target_pct, 0.01)
-        stop_pct = max(stop_pct, 0.005)
+        hl = ou_sig.get("half_life_days", 15.0) or 15.0
+
+        # Target: regime-weighted blend of each model's natural price objective.
+        # Kalman contributes its fair-value deviation; OU contributes reversion distance to μ.
+        # In BULL (60/40): Kalman fair-value dominates. In SIDEWAYS (20/80): OU dominates.
+        k_dev = abs(kalman_sig.get("deviation_pct", 0.0)) / 100.0
+        ou_reversion = abs(z) * ou_sigma_eq / (current_price + 1e-12) if z else 0.0
+        target_pct = float(np.clip(
+            weights["kalman"] * k_dev + weights["ou"] * ou_reversion,
+            0.01, 0.30,
+        ))
+
+        # Stop: 1× σ_eq scaled by √(half_life/10).
+        # A 10-day trade gets a 1.0× stop; a 40-day trade gets a ~2× stop.
+        # Prevents shake-outs on longer mean-reversion cycles.
+        hl_scale = float(np.clip(np.sqrt(hl / 10.0), 0.7, 2.0))
+        stop_pct = float(np.clip(ou_sigma_eq / (current_price + 1e-12) * hl_scale, 0.005, 0.15))
 
         if final_signal == "BUY":
             target_price = current_price * (1 + target_pct)
@@ -85,7 +104,7 @@ class SignalGenerator:
             stop_price = current_price
 
         # --- 6. Kelly position size ---
-        kelly_result = self.kelly.compute_from_signal(combined_confidence, target_pct, stop_pct)
+        kelly_result = self.kelly.compute_from_signal(win_probability, target_pct, stop_pct)
 
         # --- 7. Delta (spot holding delta = 1.0; used for hedge sizing) ---
         # For a BUY signal: delta = +1 (long exposure)

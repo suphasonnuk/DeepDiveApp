@@ -58,8 +58,9 @@ class OrnsteinUhlenbeck:
 
         self.fit(prices)
 
-        # Reject if not mean-reverting on a tradeable timescale
-        if self.half_life is None or self.half_life > 90 or self.half_life < 1:
+        # Reject if not mean-reverting on a tradeable timescale.
+        # Upper bound 60d: with 200 samples, >60d half-life has <3 full cycles in-sample.
+        if self.half_life is None or self.half_life > 60 or self.half_life < 2:
             hl = self.half_life or 0.0
             return {
                 "signal": "HOLD",
@@ -71,9 +72,12 @@ class OrnsteinUhlenbeck:
         current = float(prices[-1])
         z = self.z_score(current)
 
-        # Confidence: stronger z-score AND shorter half-life → higher confidence
-        magnitude_conf = float(np.clip(abs(z) / 3.0, 0.0, 1.0))
-        halflife_conf = float(np.clip(1.0 - abs(self.half_life - 15.0) / 40.0, 0.1, 1.0))
+        # Confidence: stronger z-score AND shorter half-life → higher confidence.
+        # magnitude_conf anchored to signal triggers: z=1 (moderate) → 0.20,
+        # z=2 (strong trigger) → 0.60, z=3 → 1.0. Prevents 0.67-cap at trigger boundary.
+        magnitude_conf = float(np.clip(0.2 + (abs(z) - 1.0) * 0.4, 0.0, 1.0))
+        # Half-life confidence peaks at 10d (fast, clean reversion), decays to floor at 40d.
+        halflife_conf = float(np.clip(1.0 - abs(self.half_life - 10.0) / 30.0, 0.1, 1.0))
         confidence = magnitude_conf * halflife_conf
 
         base = {

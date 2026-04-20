@@ -15,22 +15,28 @@ class PriceKalmanFilter:
     Measurement noise R controls how noisy the observed price is assumed to be.
     """
 
-    def __init__(self, process_noise: float = 1e-4, measurement_noise: float = 1e-2):
+    def __init__(self, process_noise: float = 1e-4, measurement_noise: float = 1e-3):
+        # Prices are normalized to p₀=1 inside _run, so these parameters are
+        # scale-invariant: process_noise=1e-4 means ±1% of starting price per step.
         self.Q = np.diag([process_noise, process_noise * 0.1])
         self.R = np.array([[measurement_noise]])
         self.H = np.array([[1.0, 0.0]])        # we observe price only
         self.F = np.array([[1.0, 1.0], [0.0, 1.0]])  # constant-velocity model
 
     def _run(self, prices: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        n = len(prices)
+        # Normalize to starting price so Q/R parameters are scale-invariant across assets.
+        p0 = float(prices[0]) + 1e-12
+        norm = prices / p0
+
+        n = len(norm)
         filtered = np.zeros(n)
         velocities = np.zeros(n)
         uncertainties = np.zeros(n)
 
-        x = np.array([prices[0], 0.0])
+        x = np.array([norm[0], 0.0])
         P = np.eye(2)
 
-        for i, z in enumerate(prices):
+        for i, z in enumerate(norm):
             x_pred = self.F @ x
             P_pred = self.F @ P @ self.F.T + self.Q
 
@@ -45,7 +51,7 @@ class PriceKalmanFilter:
             velocities[i] = x[1]
             uncertainties[i] = float(np.trace(P))
 
-        return filtered, velocities, uncertainties
+        return filtered * p0, velocities * p0, uncertainties
 
     def get_signal(self, prices: np.ndarray) -> dict:
         if len(prices) < 20:
