@@ -61,6 +61,11 @@ export async function POST(request: NextRequest) {
   for (const s of rawSignals) {
     if (s.error) continue;
 
+    // Deactivate previous signals for this symbol so no duplicates appear
+    await db.update(quantSignals)
+      .set({ isActive: false })
+      .where(and(eq(quantSignals.symbol, s.symbol as string), eq(quantSignals.isActive, true)));
+
     const risk = s.risk as Record<string, unknown>;
     const position = s.position as Record<string, unknown>;
     const models = s.models as Record<string, unknown>;

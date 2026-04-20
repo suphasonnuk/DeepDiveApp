@@ -11,23 +11,37 @@ COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 STABLECOINS = {"USDC", "USDT", "DAI", "BUSD", "FRAX", "LUSD", "USDD"}
 
 BINANCE_SYMBOL_MAP: dict[str, str | None] = {
-    "ETH": "ETHUSDT",
+    # Wrapped / aliased tokens
     "WETH": "ETHUSDT",
-    "BTC": "BTCUSDT",
     "WBTC": "BTCUSDT",
-    "ARB": "ARBUSDT",
-    "MATIC": "MATICUSDT",
-    "POL": "POLUSDT",
-    "OP": "OPUSDT",
+    "POL":  "POLUSDT",
+    # Top 20 by market cap
+    "BTC":  "BTCUSDT",
+    "ETH":  "ETHUSDT",
+    "BNB":  "BNBUSDT",
+    "SOL":  "SOLUSDT",
+    "XRP":  "XRPUSDT",
+    "ADA":  "ADAUSDT",
+    "DOGE": "DOGEUSDT",
+    "AVAX": "AVAXUSDT",
+    "DOT":  "DOTUSDT",
+    "MATIC":"MATICUSDT",
     "LINK": "LINKUSDT",
-    "UNI": "UNIUSDT",
+    "UNI":  "UNIUSDT",
+    "LTC":  "LTCUSDT",
+    "ATOM": "ATOMUSDT",
+    "NEAR": "NEARUSDT",
+    "ARB":  "ARBUSDT",
+    "OP":   "OPUSDT",
     "AAVE": "AAVEUSDT",
-    "CRV": "CRVUSDT",
-    "SNX": "SNXUSDT",
-    "MKR": "MKRUSDT",
+    "MKR":  "MKRUSDT",
+    "INJ":  "INJUSDT",
+    # Other DeFi
+    "CRV":  "CRVUSDT",
+    "SNX":  "SNXUSDT",
     "COMP": "COMPUSDT",
-    "LDO": "LDOUSDT",
-    "RPL": "RPLUSDT",
+    "LDO":  "LDOUSDT",
+    "RPL":  "RPLUSDT",
 }
 
 

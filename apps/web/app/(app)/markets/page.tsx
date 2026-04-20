@@ -29,9 +29,13 @@ interface PortfolioToken {
 }
 
 const QUICK_SCAN_TOKENS = [
-  { symbol: "BTC" }, { symbol: "ETH" }, { symbol: "ARB" },
-  { symbol: "OP" }, { symbol: "LINK" }, { symbol: "UNI" },
-  { symbol: "AAVE" }, { symbol: "MKR" },
+  { symbol: "BTC" }, { symbol: "ETH" }, { symbol: "BNB" },
+  { symbol: "SOL" }, { symbol: "XRP" }, { symbol: "ADA" },
+  { symbol: "DOGE" }, { symbol: "AVAX" }, { symbol: "DOT" },
+  { symbol: "MATIC" }, { symbol: "LINK" }, { symbol: "UNI" },
+  { symbol: "LTC" }, { symbol: "ATOM" }, { symbol: "NEAR" },
+  { symbol: "ARB" }, { symbol: "OP" }, { symbol: "AAVE" },
+  { symbol: "MKR" }, { symbol: "INJ" },
 ];
 
 const SIGNAL_STYLE: Record<string, { label: string; bg: string; text: string; border: string }> = {
