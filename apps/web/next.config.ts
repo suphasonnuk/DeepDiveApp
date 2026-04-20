@@ -27,6 +27,18 @@ const nextConfig: NextConfig = {
     "drizzle-orm",
     "better-sqlite3",
   ],
+  webpack: (config) => {
+    // Prevent webpack from trying to parse native .node binaries as JavaScript
+    config.externals.push(
+      "@libsql/win32-x64-msvc",
+      "@libsql/linux-x64-gnu",
+      "@libsql/darwin-arm64",
+      "@libsql/darwin-x64",
+      "@libsql/client",
+      "libsql",
+    );
+    return config;
+  },
 };
 
 export default nextConfig;
