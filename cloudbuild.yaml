@@ -47,9 +47,9 @@ steps:
       - -c
       - |
         QUANT_URL=$(gcloud run services describe deepdive-quant \
-          --region=us-central1 --format="value(status.url)")
+          --region=us-central1 --format="value(status.url)" | tr -d '[:space:]')
         echo "Quant engine URL: $QUANT_URL"
-        echo $QUANT_URL > /workspace/quant_url.txt
+        printf '%s' "$QUANT_URL" > /workspace/quant_url.txt
     waitFor: [deploy-quant]
 
   # ── 5. Build web app image ────────────────────────────────────────────────────
