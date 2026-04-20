@@ -16,6 +16,7 @@
     "@wagmi/connectors": "^5",
     "@wagmi/core": "^2",
     "dexie": "^4",
+    "drizzle-orm": "^0.39.3",
     "jose": "^6",
     "next": "^15",
     "react": "^19",

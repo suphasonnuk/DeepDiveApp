@@ -32,6 +32,9 @@ importers:
       dexie:
         specifier: ^4
         version: 4.4.2
+      drizzle-orm:
+        specifier: ^0.39.3
+        version: 0.39.3(@libsql/client@0.17.2(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       jose:
         specifier: ^6
         version: 6.2.2
