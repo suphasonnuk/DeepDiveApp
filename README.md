@@ -34,22 +34,27 @@ pnpm install
 
 ### 2. Set Up Environment Variables
 
-Copy `.env.example` to `.env` at the project root and fill in your values:
+Two separate env files are needed — Next.js and drizzle-kit each look in different directories.
 
-```bash
-cp .env.example .env
+**For the web app** — create `apps/web/.env.local`:
+```
+JWT_SECRET=your_64_char_hex
+TURSO_DATABASE_URL=libsql://your-db.turso.io
+TURSO_AUTH_TOKEN=your_token
+QUICKNODE_URL=https://your-endpoint.quiknode.pro/xxx/
+COVALENT_API_KEY=your_key
+QUANT_ENGINE_URL=http://localhost:8000
+NEXT_PUBLIC_RPC_ETHEREUM=https://your-endpoint.quiknode.pro/xxx/
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_id
 ```
 
-**Required:**
-- `JWT_SECRET` — Generate with `openssl rand -hex 32`
-- `TURSO_DATABASE_URL` — Create at [turso.tech](https://turso.tech)
-- `TURSO_AUTH_TOKEN` — From Turso dashboard
-- `QUICKNODE_URL` — Your QuickNode RPC endpoint
+**For database push only** — create `packages/db/.env`:
+```
+TURSO_DATABASE_URL=libsql://your-db.turso.io
+TURSO_AUTH_TOKEN=your_token
+```
 
-**Optional:**
-- `COVALENT_API_KEY` — Free at [covalenthq.com](https://www.covalenthq.com) — enables ERC-20 balance discovery
-- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` — From [cloud.walletconnect.com](https://cloud.walletconnect.com)
-- `QUANT_ENGINE_URL` — Python FastAPI URL (default: `http://localhost:8000`)
+> `apps/web/.env.local` is gitignored — each machine keeps its own copy. Next.js only reads env files from the app directory, not the repo root.
 
 ### 3. Push Database Schema
 
