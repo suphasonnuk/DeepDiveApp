@@ -57,11 +57,6 @@ steps:
     name: gcr.io/cloud-builders/docker
     args:
       - build
-      - --build-arg=NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=${_WALLETCONNECT_PROJECT_ID}
-      - --build-arg=NEXT_PUBLIC_RPC_ETHEREUM=${_RPC_ETHEREUM}
-      - --build-arg=NEXT_PUBLIC_RPC_ARBITRUM=${_RPC_ARBITRUM}
-      - --build-arg=NEXT_PUBLIC_RPC_BASE=${_RPC_BASE}
-      - --build-arg=NEXT_PUBLIC_RPC_POLYGON=${_RPC_POLYGON}
       - -t
       - gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA
       - -t
@@ -112,11 +107,6 @@ options:
   logging: CLOUD_LOGGING_ONLY
   diskSizeGb: 100
 
-# Substitution variables — set these in your Cloud Build trigger
+# Substitution variables — set in Cloud Build trigger or --substitutions flag
 substitutions:
-  _WALLETCONNECT_PROJECT_ID: ""
-  _RPC_ETHEREUM: ""
-  _RPC_ARBITRUM: ""
-  _RPC_BASE: ""
-  _RPC_POLYGON: ""
   _WEB_SERVICE_HASH: ""   # fill after first deploy to set FRONTEND_URL on quant engine

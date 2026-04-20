@@ -80,17 +80,10 @@ This creates all tables in Turso including the latest `auto_positions` table. Ru
 
 ## 4 — Deploy (First Time)
 
-From the project root, run Cloud Build with your RPC URLs and WalletConnect ID:
+From the project root:
 
 ```powershell
-gcloud builds submit --config=cloudbuild.yaml `
-  --substitutions=`
-  _WALLETCONNECT_PROJECT_ID="your-walletconnect-project-id",`
-  _RPC_ETHEREUM="https://your-eth.quiknode.pro/key/",`
-  _RPC_ARBITRUM="https://your-arb.quiknode.pro/key/",`
-  _RPC_BASE="https://your-base.quiknode.pro/key/",`
-  _RPC_POLYGON="https://your-polygon.quiknode.pro/key/",`
-  _WEB_SERVICE_HASH=""
+gcloud builds submit --config=cloudbuild.yaml --substitutions=_WEB_SERVICE_HASH=""
 ```
 
 This builds and deploys both services in order: quant engine first, then the web app.  
@@ -111,17 +104,10 @@ It looks like: `https://deepdive-web-abc123xyz-uc.a.run.app`
 Copy the hash part (`abc123xyz`) and redeploy with it:
 
 ```powershell
-gcloud builds submit --config=cloudbuild.yaml `
-  --substitutions=`
-  _WALLETCONNECT_PROJECT_ID="your-walletconnect-project-id",`
-  _RPC_ETHEREUM="https://your-eth.quiknode.pro/key/",`
-  _RPC_ARBITRUM="https://your-arb.quiknode.pro/key/",`
-  _RPC_BASE="https://your-base.quiknode.pro/key/",`
-  _RPC_POLYGON="https://your-polygon.quiknode.pro/key/",`
-  _WEB_SERVICE_HASH="abc123xyz"
+gcloud builds submit --config=cloudbuild.yaml --substitutions=_WEB_SERVICE_HASH="abc123xyz"
 ```
 
-This sets `FRONTEND_URL` on the quant engine so server-to-server communication works correctly.
+This sets `FRONTEND_URL` on the quant engine so it knows where the web app lives.
 
 ---
 
@@ -139,24 +125,14 @@ Open that URL in your browser. Log in with any passphrase (this becomes your per
 
 ```powershell
 git push origin main
-
-gcloud builds submit --config=cloudbuild.yaml `
-  --substitutions=`
-  _WALLETCONNECT_PROJECT_ID="your-walletconnect-project-id",`
-  _RPC_ETHEREUM="https://your-eth.quiknode.pro/key/",`
-  _RPC_ARBITRUM="https://your-arb.quiknode.pro/key/",`
-  _RPC_BASE="https://your-base.quiknode.pro/key/",`
-  _RPC_POLYGON="https://your-polygon.quiknode.pro/key/",`
-  _WEB_SERVICE_HASH="abc123xyz"
+gcloud builds submit --config=cloudbuild.yaml --substitutions=_WEB_SERVICE_HASH="abc123xyz"
 ```
 
-> **Tip:** Save this command (with your actual values filled in) to a file called `deploy.ps1` so you don't have to retype it.
+Replace `abc123xyz` with your actual hash from Step 5.
 
 ---
 
 ## Auto-Deploy on Every Git Push (Optional)
-
-Set up a Cloud Build trigger so every push to `main` deploys automatically:
 
 ```powershell
 gcloud builds triggers create github `
@@ -164,13 +140,7 @@ gcloud builds triggers create github `
   --repo-owner="suphasonnuk" `
   --branch-pattern="^main$" `
   --build-config="cloudbuild.yaml" `
-  --substitutions=`
-  _WALLETCONNECT_PROJECT_ID="your-walletconnect-project-id",`
-  _RPC_ETHEREUM="https://your-eth.quiknode.pro/key/",`
-  _RPC_ARBITRUM="https://your-arb.quiknode.pro/key/",`
-  _RPC_BASE="https://your-base.quiknode.pro/key/",`
-  _RPC_POLYGON="https://your-polygon.quiknode.pro/key/",`
-  _WEB_SERVICE_HASH="abc123xyz"
+  --substitutions=_WEB_SERVICE_HASH="abc123xyz"
 ```
 
 ---
