@@ -108,6 +108,43 @@ export const paperTrades = sqliteTable("paper_trades", {
   openedIdx: index("idx_paper_trades_opened").on(table.openedAt),
 }));
 
+/**
+ * Auto Positions — Binance Futures Testnet positions opened automatically from signals
+ */
+export const autoPositions = sqliteTable("auto_positions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  signalId: integer("signal_id").references(() => quantSignals.id),
+
+  symbol: text("symbol").notNull(),
+  futuresSymbol: text("futures_symbol").notNull(),       // e.g. "ETHUSDT"
+  direction: text("direction").notNull(),                // "LONG" | "SHORT"
+  leverage: integer("leverage").notNull(),
+
+  entryPrice: real("entry_price").notNull(),
+  targetPrice: real("target_price").notNull(),
+  stopPrice: real("stop_price").notNull(),
+  quantity: real("quantity").notNull(),                  // base asset amount
+  positionSizeUsdt: real("position_size_usdt").notNull(),
+
+  // Binance order IDs
+  entryOrderId: text("entry_order_id"),
+  tpOrderId: text("tp_order_id"),
+  slOrderId: text("sl_order_id"),
+
+  // Outcome
+  status: text("status").notNull().default("open"),     // "open" | "closed_tp" | "closed_sl" | "error"
+  exitPrice: real("exit_price"),
+  pnlUsdt: real("pnl_usdt"),
+  pnlPct: real("pnl_pct"),
+  closeReason: text("close_reason"),
+
+  openedAt: integer("opened_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  closedAt: integer("closed_at", { mode: "timestamp" }),
+}, (table) => ({
+  symbolIdx: index("idx_auto_positions_symbol").on(table.symbol),
+  statusIdx: index("idx_auto_positions_status").on(table.status),
+}));
+
 // TypeScript types
 export type Token = typeof tokens.$inferSelect;
 export type NewToken = typeof tokens.$inferInsert;

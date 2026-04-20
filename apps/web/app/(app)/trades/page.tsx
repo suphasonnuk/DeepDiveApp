@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface PaperTrade {
   id: number;
@@ -15,6 +15,26 @@ interface PaperTrade {
   regime: string;
   status: string;
   pnlPct: number | null;
+  openedAt: string;
+  closedAt: string | null;
+}
+
+interface AutoPosition {
+  id: number;
+  symbol: string;
+  futuresSymbol: string;
+  direction: string;
+  leverage: number;
+  entryPrice: number;
+  targetPrice: number;
+  stopPrice: number;
+  quantity: number;
+  positionSizeUsdt: number;
+  status: string;
+  exitPrice: number | null;
+  pnlUsdt: number | null;
+  pnlPct: number | null;
+  closeReason: string | null;
   openedAt: string;
   closedAt: string | null;
 }
@@ -50,27 +70,45 @@ function MetricCard({ label, value, sub }: { label: string; value: string; sub?:
   );
 }
 
+const POS_STATUS: Record<string, { label: string; color: string }> = {
+  open:      { label: "Live",      color: "text-accent" },
+  closed_tp: { label: "Target ✓",  color: "text-success" },
+  closed_sl: { label: "Stop ✗",    color: "text-danger" },
+  error:     { label: "Error",     color: "text-warning" },
+};
+
 export default function PerformancePage() {
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   const [trades, setTrades] = useState<PaperTrade[]>([]);
-  const [tab, setTab] = useState<"open" | "closed">("open");
+  const [positions, setPositions] = useState<AutoPosition[]>([]);
+  const [tab, setTab] = useState<"positions" | "open" | "closed">("positions");
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [closingId, setClosingId] = useState<number | null>(null);
   const [closePrice, setClosePrice] = useState("");
   const [closeError, setCloseError] = useState<string | null>(null);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
-    const [metRes, tradeRes] = await Promise.allSettled([
+    const [metRes, tradeRes, posRes] = await Promise.allSettled([
       fetch("/api/performance").then((r) => r.json()),
       fetch("/api/performance/trades?limit=100").then((r) => r.json()),
+      fetch("/api/positions").then((r) => r.json()),
     ]);
     if (metRes.status === "fulfilled") setMetrics(metRes.value);
     if (tradeRes.status === "fulfilled") setTrades(tradeRes.value.trades ?? []);
+    if (posRes.status === "fulfilled") setPositions(posRes.value.positions ?? []);
     setLoading(false);
+  }, []);
+
+  async function syncPositions() {
+    setSyncing(true);
+    await fetch("/api/positions/sync", { method: "POST" });
+    await refresh();
+    setSyncing(false);
   }
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
   // Uses the quant model's risk envelope (targetPrice / stopPrice) as the validity boundary.
   // Custom exits beyond 2× target or below 0.5× stop are almost certainly typos in crypto.
@@ -194,9 +232,9 @@ export default function PerformancePage() {
         </div>
       ) : null}
 
-      {/* Trade list */}
+      {/* Tabs */}
       <div className="flex gap-2">
-        {(["open", "closed"] as const).map((t) => (
+        {(["positions", "open", "closed"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -206,12 +244,86 @@ export default function PerformancePage() {
                 : "border border-border bg-surface text-text-secondary hover:border-accent/50"
             }`}
           >
-            {t === "open" ? `Open (${openTrades.length})` : `Closed (${closedTrades.length})`}
+            {t === "positions"
+              ? `Binance (${positions.filter(p => p.status === "open").length})`
+              : t === "open"
+              ? `Paper Open (${openTrades.length})`
+              : `Paper Closed (${closedTrades.length})`}
           </button>
         ))}
       </div>
 
-      {loading && !trades.length && (
+      {/* Binance Positions panel */}
+      {tab === "positions" && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-text-muted">{positions.length} total positions on Binance Futures Testnet</p>
+            <button
+              onClick={syncPositions}
+              disabled={syncing}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-surface disabled:opacity-40"
+            >
+              {syncing ? "Syncing..." : "Sync from Binance"}
+            </button>
+          </div>
+
+          {positions.length === 0 && !loading && (
+            <div className="rounded-xl border border-border bg-surface p-8 text-center">
+              <p className="font-medium text-text-secondary">No positions yet</p>
+              <p className="mt-1 text-sm text-text-muted">
+                Go to Signals → Quick Scan. BUY/SELL signals auto-open positions on Binance Testnet.
+              </p>
+            </div>
+          )}
+
+          {positions.map((pos) => {
+            const st = POS_STATUS[pos.status] ?? { label: pos.status, color: "text-text-muted" };
+            const isLong = pos.direction === "LONG";
+            return (
+              <div key={pos.id} className="rounded-xl border border-border bg-surface p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${isLong ? "text-success" : "text-danger"}`}>
+                        {pos.direction}
+                      </span>
+                      <span className="font-medium">{pos.futuresSymbol}</span>
+                      <span className="rounded bg-surface-elevated px-1.5 py-0.5 text-xs text-text-muted">
+                        {pos.leverage}×
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-text-muted">
+                      Entry ${pos.entryPrice.toPrecision(5)}
+                      {pos.exitPrice != null && ` → Exit $${pos.exitPrice.toPrecision(5)}`}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      TP ${pos.targetPrice.toPrecision(5)} · SL ${pos.stopPrice.toPrecision(5)}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      Size ${pos.positionSizeUsdt.toFixed(2)} · {pos.quantity} {pos.symbol}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-semibold ${st.color}`}>{st.label}</p>
+                    {pos.pnlUsdt != null && (
+                      <p className={`text-xs font-medium ${pos.pnlUsdt >= 0 ? "text-success" : "text-danger"}`}>
+                        {pos.pnlUsdt >= 0 ? "+" : ""}${pos.pnlUsdt.toFixed(2)}
+                      </p>
+                    )}
+                    {pos.pnlPct != null && (
+                      <p className={`text-xs ${pos.pnlPct >= 0 ? "text-success" : "text-danger"}`}>
+                        {pos.pnlPct >= 0 ? "+" : ""}{pos.pnlPct.toFixed(2)}%
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab !== "positions" && loading && !trades.length && (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-20 animate-pulse rounded-xl bg-surface" />
@@ -219,7 +331,7 @@ export default function PerformancePage() {
         </div>
       )}
 
-      {!loading && displayTrades.length === 0 && (
+      {tab !== "positions" && !loading && displayTrades.length === 0 && (
         <div className="rounded-xl border border-border bg-surface p-8 text-center">
           <p className="text-text-muted">
             {tab === "open" ? "No open paper trades." : "No closed trades yet."}
@@ -232,7 +344,7 @@ export default function PerformancePage() {
         </div>
       )}
 
-      <div className="space-y-2">
+      {tab !== "positions" && <div className="space-y-2">
         {displayTrades.map((trade) => {
           const statusStyle = STATUS_STYLE[trade.status] ?? { label: trade.status, color: "text-text-muted" };
           const isClosing = closingId === trade.id;
@@ -345,7 +457,7 @@ export default function PerformancePage() {
             </div>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 }

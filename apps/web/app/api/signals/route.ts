@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@deepdive/db";
+import { db, autoPositions, and } from "@deepdive/db";
 import { quantSignals } from "@deepdive/db";
 import { desc, eq } from "@deepdive/db";
 
@@ -90,6 +90,60 @@ export async function POST(request: NextRequest) {
       .returning();
 
     inserted.push({ ...row, models: s.models, position: s.position });
+  }
+
+  // Auto-open Binance Futures Testnet positions for BUY/SELL signals (fire and forget)
+  for (const signal of inserted) {
+    if (signal.signal === "HOLD" || !signal.targetPrice || !signal.stopPrice) continue;
+
+    const existing = await db.select().from(autoPositions)
+      .where(and(eq(autoPositions.symbol, signal.symbol), eq(autoPositions.status, "open")))
+      .limit(1);
+    if (existing.length > 0) continue;
+
+    const direction = signal.signal === "BUY" ? "LONG" : "SHORT";
+    const balRes = await fetch(`${QUANT_ENGINE_URL}/api/v1/positions/balance`).catch(() => null);
+    const balData = balRes?.ok ? await balRes.json() : { usdt_balance: 1000 };
+    const kelly = (signal.kellyFraction as number | null) ?? 0.05;
+    const usdtAllocation = Math.max((balData.usdt_balance ?? 1000) * kelly, 10);
+    const leverage = parseInt(process.env.BINANCE_LEVERAGE ?? "3");
+
+    const posRes = await fetch(`${QUANT_ENGINE_URL}/api/v1/positions/open`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        symbol: signal.symbol,
+        direction,
+        usdt_allocation: usdtAllocation,
+        leverage,
+        current_price: signal.priceAtSignal,
+        target_price: signal.targetPrice,
+        stop_price: signal.stopPrice,
+      }),
+    }).catch(() => null);
+
+    if (!posRes?.ok) {
+      console.warn("[signals] auto-position skipped for", signal.symbol, posRes?.status);
+      continue;
+    }
+
+    const posData = await posRes.json();
+    await db.insert(autoPositions).values({
+      signalId: signal.id,
+      symbol: signal.symbol,
+      futuresSymbol: posData.futures_symbol,
+      direction,
+      leverage,
+      entryPrice: posData.entry_price,
+      targetPrice: posData.target_price,
+      stopPrice: posData.stop_price,
+      quantity: posData.quantity,
+      positionSizeUsdt: posData.position_size_usdt,
+      entryOrderId: posData.entry_order_id,
+      tpOrderId: posData.tp_order_id,
+      slOrderId: posData.sl_order_id,
+      status: "open",
+    }).catch((err) => console.error("[signals] failed to save position:", err));
   }
 
   return NextResponse.json({ signals: inserted, total: inserted.length });

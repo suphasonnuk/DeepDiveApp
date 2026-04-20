@@ -9,8 +9,16 @@ from dotenv import load_dotenv
 from app.data.fetchers import fetch_prices
 from app.signals.generator import SignalGenerator
 from app.performance.tracker import PaperTradeTracker
+from app.trading.binance_futures import BinanceFuturesTestnet, get_futures_symbol
 
 load_dotenv()
+
+def _get_binance_client() -> BinanceFuturesTestnet | None:
+    key = os.getenv("BINANCE_TESTNET_API_KEY")
+    secret = os.getenv("BINANCE_TESTNET_SECRET")
+    if not key or not secret:
+        return None
+    return BinanceFuturesTestnet(key, secret)
 
 app = FastAPI(
     title="DeepDive Quant Engine",
@@ -55,6 +63,22 @@ class OpenTradeRequest(BaseModel):
 
 class CloseTradeRequest(BaseModel):
     exit_price: float
+
+
+class OpenPositionRequest(BaseModel):
+    symbol: str
+    direction: str          # "LONG" | "SHORT"
+    usdt_allocation: float
+    leverage: int = 3
+    current_price: float
+    target_price: float
+    stop_price: float
+
+
+class PositionStatusRequest(BaseModel):
+    futures_symbol: str
+    tp_order_id: str
+    sl_order_id: str
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
@@ -148,6 +172,50 @@ def close_paper_trade(trade_id: str, req: CloseTradeRequest):
 def get_performance():
     """Aggregate performance metrics: win rate, Sharpe, max drawdown, equity curve."""
     return paper_tracker.get_metrics()
+
+
+@app.get("/api/v1/positions/balance")
+async def get_balance():
+    client = _get_binance_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Binance testnet not configured — set BINANCE_TESTNET_API_KEY and BINANCE_TESTNET_SECRET")
+    balance = await client.get_balance()
+    return {"usdt_balance": balance}
+
+
+@app.post("/api/v1/positions/open")
+async def open_position(req: OpenPositionRequest):
+    client = _get_binance_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Binance testnet not configured — set BINANCE_TESTNET_API_KEY and BINANCE_TESTNET_SECRET")
+    if not get_futures_symbol(req.symbol):
+        raise HTTPException(status_code=422, detail=f"No futures pair for {req.symbol}")
+    try:
+        result = await client.open_position(
+            symbol=req.symbol,
+            direction=req.direction,
+            usdt_allocation=req.usdt_allocation,
+            leverage=req.leverage,
+            current_price=req.current_price,
+            target_price=req.target_price,
+            stop_price=req.stop_price,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/positions/status")
+async def check_position_status(req: PositionStatusRequest):
+    client = _get_binance_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Binance testnet not configured")
+    try:
+        return await client.get_position_status(
+            req.futures_symbol, req.tp_order_id, req.sl_order_id
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
