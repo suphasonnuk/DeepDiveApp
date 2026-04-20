@@ -33,7 +33,10 @@ export async function POST(request: NextRequest) {
   }
 
   // Call quant engine batch signal generation
-  const quantRes = await fetch(`${QUANT_ENGINE_URL}/api/v1/signals/batch`, {
+  const quantUrl = `${QUANT_ENGINE_URL}/api/v1/signals/batch`;
+  console.log("[signals] calling quant engine:", quantUrl, "tokens:", tokens.map(t => t.symbol));
+
+  const quantRes = await fetch(quantUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -43,10 +46,12 @@ export async function POST(request: NextRequest) {
         prices: t.prices,
       })),
     }),
-  }).catch(() => null);
+  }).catch((err) => { console.error("[signals] quant engine fetch error:", err); return null; });
 
   if (!quantRes?.ok) {
-    return NextResponse.json({ error: "quant engine unavailable" }, { status: 503 });
+    const body = await quantRes?.text().catch(() => null);
+    console.error("[signals] quant engine error:", quantRes?.status, body);
+    return NextResponse.json({ error: "quant engine unavailable", detail: body, url: quantUrl }, { status: 503 });
   }
 
   const rawSignals: Record<string, unknown>[] = await quantRes.json();
