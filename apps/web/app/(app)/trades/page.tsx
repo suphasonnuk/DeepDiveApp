@@ -306,14 +306,19 @@ export default function PerformancePage() {
                   <div className="text-right">
                     <p className={`text-sm font-semibold ${st.color}`}>{st.label}</p>
                     {pos.pnlUsdt != null && (
-                      <p className={`text-xs font-medium ${pos.pnlUsdt >= 0 ? "text-success" : "text-danger"}`}>
-                        {pos.pnlUsdt >= 0 ? "+" : ""}${pos.pnlUsdt.toFixed(2)}
-                      </p>
-                    )}
-                    {pos.pnlPct != null && (
-                      <p className={`text-xs ${pos.pnlPct >= 0 ? "text-success" : "text-danger"}`}>
-                        {pos.pnlPct >= 0 ? "+" : ""}{pos.pnlPct.toFixed(2)}%
-                      </p>
+                      <>
+                        <p className={`text-xs font-medium ${pos.pnlUsdt >= 0 ? "text-success" : "text-danger"}`}>
+                          {pos.pnlUsdt >= 0 ? "+" : ""}${pos.pnlUsdt.toFixed(2)}
+                        </p>
+                        {pos.pnlPct != null && (
+                          <p className={`text-xs ${pos.pnlPct >= 0 ? "text-success" : "text-danger"}`}>
+                            {pos.pnlPct >= 0 ? "+" : ""}{pos.pnlPct.toFixed(2)}%
+                            {pos.status === "open" && (
+                              <span className="ml-1 text-text-muted">(live)</span>
+                            )}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

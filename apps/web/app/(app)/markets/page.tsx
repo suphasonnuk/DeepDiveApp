@@ -69,6 +69,7 @@ export default function SignalsPage() {
   const [scanning, setScanning] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [paperTradeStatus, setPaperTradeStatus] = useState<Record<number, "idle" | "opening" | "done" | "error">>({});
+  const [binanceStatus, setBinanceStatus] = useState<Record<number, "idle" | "opening" | "done" | "skipped" | "error">>({});
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanInfo, setScanInfo] = useState<string | null>(null);
 
@@ -126,6 +127,31 @@ export default function SignalsPage() {
 
   async function quickScan() {
     await runScan(QUICK_SCAN_TOKENS, "Quick scan");
+  }
+
+  async function openBinanceTrade(signal: QuantSignal) {
+    if (signal.signal === "HOLD" || !signal.targetPrice || !signal.stopPrice) return;
+    setBinanceStatus((s) => ({ ...s, [signal.id]: "opening" }));
+    try {
+      const res = await fetch("/api/positions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signalId: signal.id,
+          symbol: signal.symbol,
+          direction: signal.signal === "BUY" ? "LONG" : "SHORT",
+          currentPrice: signal.priceAtSignal,
+          targetPrice: signal.targetPrice,
+          stopPrice: signal.stopPrice,
+          kellyFraction: signal.kellyFraction ?? 0.05,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      setBinanceStatus((s) => ({ ...s, [signal.id]: data.skipped ? "skipped" : "done" }));
+    } catch {
+      setBinanceStatus((s) => ({ ...s, [signal.id]: "error" }));
+    }
   }
 
   async function openPaperTrade(signal: QuantSignal) {
@@ -327,25 +353,56 @@ export default function SignalsPage() {
                     )}
                   </div>
 
-                  {signal.signal !== "HOLD" && (
-                    <button
-                      disabled={tradeStatus === "opening" || tradeStatus === "done"}
-                      onClick={() => openPaperTrade(signal)}
-                      className={`w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
-                        tradeStatus === "error"
-                          ? "bg-danger/10 text-danger hover:bg-danger/20"
-                          : "bg-accent/10 text-accent hover:bg-accent/20"
-                      }`}
-                    >
-                      {tradeStatus === "opening"
-                        ? "Opening..."
-                        : tradeStatus === "done"
-                          ? "Trade Opened ✓"
-                          : tradeStatus === "error"
-                            ? "Failed — tap to retry"
-                            : "Open Paper Trade"}
-                    </button>
-                  )}
+                  {signal.signal !== "HOLD" && (() => {
+                    const bStatus = binanceStatus[signal.id] ?? "idle";
+                    return (
+                      <div className="space-y-2">
+                        {/* Binance Futures Testnet — real position with TP/SL */}
+                        <button
+                          disabled={bStatus === "opening" || bStatus === "done" || bStatus === "skipped"}
+                          onClick={() => openBinanceTrade(signal)}
+                          className={`w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                            bStatus === "error"
+                              ? "bg-danger/10 text-danger hover:bg-danger/20"
+                              : bStatus === "done"
+                                ? "bg-success/10 text-success"
+                                : bStatus === "skipped"
+                                  ? "bg-surface-elevated text-text-muted"
+                                  : "bg-success/10 text-success hover:bg-success/20"
+                          }`}
+                        >
+                          {bStatus === "opening"
+                            ? "Opening on Binance..."
+                            : bStatus === "done"
+                              ? "Binance Position Opened ✓"
+                              : bStatus === "skipped"
+                                ? "Already Open on Binance"
+                                : bStatus === "error"
+                                  ? "Binance Failed — tap to retry"
+                                  : "Open on Binance Testnet"}
+                        </button>
+
+                        {/* Paper trade — local tracking only */}
+                        <button
+                          disabled={tradeStatus === "opening" || tradeStatus === "done"}
+                          onClick={() => openPaperTrade(signal)}
+                          className={`w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                            tradeStatus === "error"
+                              ? "bg-danger/10 text-danger hover:bg-danger/20"
+                              : "bg-accent/10 text-accent hover:bg-accent/20"
+                          }`}
+                        >
+                          {tradeStatus === "opening"
+                            ? "Opening..."
+                            : tradeStatus === "done"
+                              ? "Paper Trade Opened ✓"
+                              : tradeStatus === "error"
+                                ? "Failed — tap to retry"
+                                : "Open Paper Trade"}
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

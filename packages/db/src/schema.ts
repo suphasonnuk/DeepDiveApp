@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, real, index } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 /**
  * Tokens — ERC-20 token metadata for the connected wallet
@@ -138,11 +138,16 @@ export const autoPositions = sqliteTable("auto_positions", {
   pnlPct: real("pnl_pct"),
   closeReason: text("close_reason"),
 
+  // Race-condition guard: set to 1 when open, NULL when closed.
+  // SQLite unique indexes ignore NULLs, so only one row per symbol can have openSlot=1.
+  openSlot: integer("open_slot"),
+
   openedAt: integer("opened_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   closedAt: integer("closed_at", { mode: "timestamp" }),
 }, (table) => ({
   symbolIdx: index("idx_auto_positions_symbol").on(table.symbol),
   statusIdx: index("idx_auto_positions_status").on(table.status),
+  openUniqueIdx: uniqueIndex("idx_auto_positions_open_unique").on(table.symbol, table.openSlot),
 }));
 
 // TypeScript types
@@ -154,3 +159,5 @@ export type QuantSignal = typeof quantSignals.$inferSelect;
 export type NewQuantSignal = typeof quantSignals.$inferInsert;
 export type PaperTrade = typeof paperTrades.$inferSelect;
 export type NewPaperTrade = typeof paperTrades.$inferInsert;
+export type AutoPosition = typeof autoPositions.$inferSelect;
+export type NewAutoPosition = typeof autoPositions.$inferInsert;

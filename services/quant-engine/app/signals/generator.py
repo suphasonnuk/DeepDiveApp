@@ -57,20 +57,26 @@ class SignalGenerator:
         o_score = _SIGNAL_SCORE.get(ou_sig["signal"], 0) * ou_sig["confidence"]
         combined_score = weights["kalman"] * k_score + weights["ou"] * o_score
 
-        # Alignment-aware confidence: opposing signals cancel in the score, so |combined_score|
-        # reflects how strongly and consistently the models agree on direction.
-        # Mapped to P(win) ∈ [0.5, 1.0]: zero alignment = coin flip, full agreement = 1.0.
+        # Directional alignment: how strongly models agree on direction (used for BUY/SELL confidence).
         alignment = abs(combined_score)
-        combined_confidence = round(alignment, 4)       # display metric [0, 1]
         win_probability = 0.5 + 0.5 * alignment         # Kelly input [0.5, 1.0]
 
-        # --- 4. Final signal ---
+        # Model certainty: weighted average of individual model confidences regardless of direction.
+        # Used for HOLD confidence — a confident HOLD means both models are certain nothing is happening.
+        model_certainty = (weights["kalman"] * kalman_sig["confidence"]
+                           + weights["ou"] * ou_sig["confidence"])
+
+        # --- 4. Final signal + confidence ---
         if combined_score > _BUY_THRESHOLD:
             final_signal = "BUY"
+            combined_confidence = round(alignment, 4)
         elif combined_score < _SELL_THRESHOLD:
             final_signal = "SELL"
+            combined_confidence = round(alignment, 4)
         else:
             final_signal = "HOLD"
+            # HOLD confidence reflects model certainty, not directional alignment (which is always ~0 for HOLD).
+            combined_confidence = round(model_certainty, 4)
 
         # --- 5. Risk levels ---
         ou_sigma_eq = self.ou.sigma_eq if self.ou.sigma_eq > 0 else current_price * 0.03

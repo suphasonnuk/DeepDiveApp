@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
       tpOrderId: posData.tp_order_id,
       slOrderId: posData.sl_order_id,
       status: "open",
+      openSlot: 1,  // unique per symbol — DB rejects duplicate open positions for same coin
     }).catch((err) => console.error("[signals] failed to save position:", err));
   }
 

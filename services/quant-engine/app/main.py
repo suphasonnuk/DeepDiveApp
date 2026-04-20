@@ -174,6 +174,19 @@ def get_performance():
     return paper_tracker.get_metrics()
 
 
+@app.get("/api/v1/positions/live")
+async def get_live_positions():
+    """Returns all open Binance Futures positions keyed by symbol, with unrealizedProfit."""
+    client = _get_binance_client()
+    if not client:
+        return {}
+    try:
+        positions = await client.get_account_positions()
+        return {p["symbol"]: p for p in positions}
+    except Exception:
+        return {}
+
+
 @app.get("/api/v1/positions/balance")
 async def get_balance():
     client = _get_binance_client()

@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
     tpOrderId: posData.tp_order_id,
     slOrderId: posData.sl_order_id,
     status: "open",
+    openSlot: 1,  // unique per symbol — DB rejects duplicate open positions for same coin
   }).returning();
 
   return NextResponse.json({ position }, { status: 201 });

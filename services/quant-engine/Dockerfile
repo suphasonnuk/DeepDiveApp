@@ -1,16 +1,12 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install dependencies first (separate layer for cache efficiency)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY app/ ./app/
+COPY . .
 
-# Cloud Run sets $PORT at runtime (default 8080).
-# Using shell form so the variable is expanded.
 ENV PORT=8080
 EXPOSE 8080
 

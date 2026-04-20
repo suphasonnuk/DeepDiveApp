@@ -8,17 +8,37 @@ from typing import Optional
 
 import httpx
 
-TESTNET_BASE = "https://testnet.binancefuture.com"
+TESTNET_BASE = "https://testnet.binancefutures.com"
 
 SYMBOL_MAP: dict[str, str] = {
-    "ETH": "ETHUSDT", "WETH": "ETHUSDT",
+    # BTC / ETH
     "BTC": "BTCUSDT", "WBTC": "BTCUSDT",
-    "ARB": "ARBUSDT", "OP": "OPUSDT",
-    "LINK": "LINKUSDT", "UNI": "UNIUSDT",
-    "AAVE": "AAVEUSDT", "MKR": "MKRUSDT",
-    "CRV": "CRVUSDT", "SNX": "SNXUSDT",
-    "COMP": "COMPUSDT", "LDO": "LDOUSDT",
-    "MATIC": "MATICUSDT", "POL": "POLUSDT",
+    "ETH": "ETHUSDT", "WETH": "ETHUSDT",
+    # Top 20 by market cap
+    "BNB":  "BNBUSDT",
+    "SOL":  "SOLUSDT",
+    "XRP":  "XRPUSDT",
+    "ADA":  "ADAUSDT",
+    "DOGE": "DOGEUSDT",
+    "AVAX": "AVAXUSDT",
+    "DOT":  "DOTUSDT",
+    "MATIC":"MATICUSDT",
+    "POL":  "MATICUSDT",   # POL rebranded from MATIC; futures pair still MATICUSDT
+    "LINK": "LINKUSDT",
+    "UNI":  "UNIUSDT",
+    "LTC":  "LTCUSDT",
+    "ATOM": "ATOMUSDT",
+    "NEAR": "NEARUSDT",
+    "ARB":  "ARBUSDT",
+    "OP":   "OPUSDT",
+    "AAVE": "AAVEUSDT",
+    "MKR":  "MKRUSDT",
+    "INJ":  "INJUSDT",
+    # DeFi extras
+    "CRV":  "CRVUSDT",
+    "SNX":  "SNXUSDT",
+    "COMP": "COMPUSDT",
+    "LDO":  "LDOUSDT",
 }
 
 
@@ -32,48 +52,47 @@ class BinanceFuturesTestnet:
         self.api_secret = api_secret
         self._lot_cache: dict[str, dict] = {}
 
-    def _sign(self, params: dict) -> str:
-        query = "&".join(f"{k}={v}" for k, v in params.items())
+    def _sign(self, query_string: str) -> str:
         return hmac.new(
             self.api_secret.encode("utf-8"),
-            query.encode("utf-8"),
+            query_string.encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
+
+    def _build_signed_url(self, path: str, params: dict) -> str:
+        # Build query string in insertion order, sign it, then append signature.
+        # Never let the HTTP client re-serialize params — Binance validates the
+        # signature against the exact transmitted query string.
+        params["timestamp"] = int(time.time() * 1000)
+        qs = "&".join(f"{k}={v}" for k, v in params.items())
+        return f"{TESTNET_BASE}{path}?{qs}&signature={self._sign(qs)}"
 
     def _headers(self) -> dict:
         return {"X-MBX-APIKEY": self.api_key}
 
     async def _get(self, path: str, params: dict | None = None, signed: bool = False) -> dict | list:
-        params = dict(params or {})
-        if signed:
-            params["timestamp"] = int(time.time() * 1000)
-            params["signature"] = self._sign(params)
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(
-                f"{TESTNET_BASE}{path}", params=params, headers=self._headers()
-            )
+            if signed:
+                url = self._build_signed_url(path, dict(params or {}))
+                resp = await client.get(url, headers=self._headers())
+            else:
+                resp = await client.get(
+                    f"{TESTNET_BASE}{path}", params=params or {}, headers=self._headers()
+                )
             resp.raise_for_status()
             return resp.json()
 
     async def _post(self, path: str, params: dict) -> dict:
-        params = dict(params)
-        params["timestamp"] = int(time.time() * 1000)
-        params["signature"] = self._sign(params)
+        url = self._build_signed_url(path, dict(params))
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                f"{TESTNET_BASE}{path}", params=params, headers=self._headers()
-            )
+            resp = await client.post(url, headers=self._headers())
             resp.raise_for_status()
             return resp.json()
 
     async def _delete(self, path: str, params: dict) -> dict:
-        params = dict(params)
-        params["timestamp"] = int(time.time() * 1000)
-        params["signature"] = self._sign(params)
+        url = self._build_signed_url(path, dict(params))
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.delete(
-                f"{TESTNET_BASE}{path}", params=params, headers=self._headers()
-            )
+            resp = await client.delete(url, headers=self._headers())
             resp.raise_for_status()
             return resp.json()
 
@@ -83,6 +102,11 @@ class BinanceFuturesTestnet:
             if asset["asset"] == "USDT":
                 return float(asset["availableBalance"])
         return 0.0
+
+    async def get_account_positions(self) -> list[dict]:
+        """Returns all positions with non-zero size from Binance Futures, including unrealized P&L."""
+        positions = await self._get("/fapi/v2/positionRisk", signed=True)
+        return [p for p in positions if abs(float(p.get("positionAmt", 0))) > 0]
 
     async def _get_lot_info(self, futures_symbol: str) -> dict:
         if futures_symbol in self._lot_cache:
