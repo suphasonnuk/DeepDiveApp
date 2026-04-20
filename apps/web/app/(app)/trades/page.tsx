@@ -44,7 +44,7 @@ function MetricCard({ label, value, sub }: { label: string; value: string; sub?:
   return (
     <div className="rounded-lg border border-border bg-surface p-3">
       <p className="text-xs text-text-muted">{label}</p>
-      <p className="mt-0.5 text-base font-bold">{value}</p>
+      <p className="font-display mt-0.5 text-lg font-bold">{value}</p>
       {sub && <p className="text-xs text-text-muted">{sub}</p>}
     </div>
   );
@@ -57,6 +57,7 @@ export default function PerformancePage() {
   const [loading, setLoading] = useState(true);
   const [closingId, setClosingId] = useState<number | null>(null);
   const [closePrice, setClosePrice] = useState("");
+  const [closeError, setCloseError] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -71,15 +72,38 @@ export default function PerformancePage() {
 
   useEffect(() => { refresh(); }, []);
 
+  // Uses the quant model's risk envelope (targetPrice / stopPrice) as the validity boundary.
+  // Custom exits beyond 2× target or below 0.5× stop are almost certainly typos in crypto.
+  function unusualExitPriceWarning(exitPrice: number, targetPrice: number, stopPrice: number): string | null {
+    if (!isFinite(exitPrice) || exitPrice <= 0) return null;
+    if (exitPrice > targetPrice * 2) {
+      return `${((exitPrice / targetPrice - 1) * 100).toFixed(0)}% above quant target — possible entry error`;
+    }
+    if (exitPrice < stopPrice * 0.5) {
+      return `${((1 - exitPrice / stopPrice) * 100).toFixed(0)}% below quant stop — possible entry error`;
+    }
+    return null;
+  }
+
   async function closeTrade(id: number, exitPrice: number) {
-    await fetch(`/api/performance/trades/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ exitPrice }),
-    });
-    setClosingId(null);
-    setClosePrice("");
-    refresh();
+    if (exitPrice <= 0) {
+      setCloseError("Exit price must be greater than zero");
+      return;
+    }
+    setCloseError(null);
+    try {
+      const res = await fetch(`/api/performance/trades/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exitPrice }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setClosingId(null);
+      setClosePrice("");
+      refresh();
+    } catch (e) {
+      setCloseError((e as Error).message);
+    }
   }
 
   const openTrades = trades.filter((t) => t.status === "open");
@@ -88,7 +112,46 @@ export default function PerformancePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Performance</h1>
+      <h1 className="font-display text-2xl font-bold tracking-tight">Performance</h1>
+
+      {/* Equity curve — primary visual anchor; proof the models generate alpha */}
+      {metrics && metrics.equityCurve.length > 1 && (() => {
+        const curve = metrics.equityCurve;
+        const min = Math.min(...curve);
+        const max = Math.max(...curve);
+        const range = max - min || 1;
+        const totalReturn = ((curve[curve.length - 1] - 1) * 100).toFixed(2);
+        const peak = ((max - 1) * 100).toFixed(2);
+        const isUp = curve[curve.length - 1] >= 1;
+        return (
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <div className="mb-3 flex items-baseline justify-between">
+              <p className="text-sm font-medium text-text-secondary">Equity Curve</p>
+              <p className={`font-display text-2xl font-bold ${isUp ? "text-success" : "text-danger"}`}>
+                {Number(totalReturn) > 0 ? "+" : ""}{totalReturn}%
+              </p>
+            </div>
+            <div className="flex h-28 items-end gap-px">
+              {curve.map((v, i) => {
+                const h = Math.round(((v - min) / range) * 100);
+                const isPositive = v >= 1;
+                return (
+                  <div
+                    key={i}
+                    style={{ height: `${Math.max(h, 2)}%`, flex: 1 }}
+                    className={`rounded-sm ${isPositive ? "bg-success/60" : "bg-danger/60"}`}
+                  />
+                );
+              })}
+            </div>
+            <div className="mt-2 flex justify-between text-xs text-text-muted">
+              <span>Baseline (1.0×)</span>
+              <span>Peak +{peak}%</span>
+              <span>{curve.length} trades</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Metrics grid */}
       {loading && !metrics ? (
@@ -130,37 +193,6 @@ export default function PerformancePage() {
           />
         </div>
       ) : null}
-
-      {/* Equity curve (simple sparkline) */}
-      {metrics && metrics.equityCurve.length > 1 && (
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="mb-2 text-xs text-text-muted">Equity Curve</p>
-          <div className="flex h-16 items-end gap-px">
-            {metrics.equityCurve.map((v, i) => {
-              const min = Math.min(...metrics.equityCurve);
-              const max = Math.max(...metrics.equityCurve);
-              const range = max - min || 1;
-              const h = Math.round(((v - min) / range) * 100);
-              const isPositive = v >= metrics.equityCurve[0];
-              return (
-                <div
-                  key={i}
-                  style={{ height: `${Math.max(h, 2)}%`, flex: 1 }}
-                  className={`rounded-sm ${isPositive ? "bg-success/60" : "bg-danger/60"}`}
-                />
-              );
-            })}
-          </div>
-          <div className="mt-1 flex justify-between text-xs text-text-muted">
-            <span>Start</span>
-            <span>
-              {metrics.equityCurve.length > 0
-                ? `${((metrics.equityCurve[metrics.equityCurve.length - 1] - 1) * 100).toFixed(2)}% total`
-                : ""}
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Trade list */}
       <div className="flex gap-2">
@@ -243,27 +275,62 @@ export default function PerformancePage() {
               {trade.status === "open" && (
                 <div className="mt-3 border-t border-border pt-3">
                   {isClosing ? (
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        placeholder="Exit price"
-                        value={closePrice}
-                        onChange={(e) => setClosePrice(e.target.value)}
-                        className="flex-1 rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
-                      />
-                      <button
-                        disabled={!closePrice}
-                        onClick={() => closeTrade(trade.id, parseFloat(closePrice))}
-                        className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
-                      >
-                        Close
-                      </button>
-                      <button
-                        onClick={() => { setClosingId(null); setClosePrice(""); }}
-                        className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-muted"
-                      >
-                        Cancel
-                      </button>
+                    <div className="space-y-2">
+                      {/* Quant model's pre-calculated exit levels — primary actions */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => closeTrade(trade.id, trade.targetPrice)}
+                          className="rounded-lg bg-success/10 px-3 py-2 text-left transition-colors hover:bg-success/20"
+                        >
+                          <p className="text-xs text-text-muted">Target hit</p>
+                          <p className="text-sm font-semibold text-success">${trade.targetPrice.toPrecision(5)}</p>
+                          <p className="text-xs text-success">
+                            +{(((trade.targetPrice - trade.entryPrice) / trade.entryPrice) * 100).toFixed(2)}%
+                          </p>
+                        </button>
+                        <button
+                          onClick={() => closeTrade(trade.id, trade.stopPrice)}
+                          className="rounded-lg bg-danger/10 px-3 py-2 text-left transition-colors hover:bg-danger/20"
+                        >
+                          <p className="text-xs text-text-muted">Stop hit</p>
+                          <p className="text-sm font-semibold text-danger">${trade.stopPrice.toPrecision(5)}</p>
+                          <p className="text-xs text-danger">
+                            {(((trade.stopPrice - trade.entryPrice) / trade.entryPrice) * 100).toFixed(2)}%
+                          </p>
+                        </button>
+                      </div>
+                      {/* Custom exit — for mid-trade discretionary closes */}
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="0.000001"
+                          step="any"
+                          placeholder="Custom exit price"
+                          value={closePrice}
+                          onChange={(e) => { setClosePrice(e.target.value); setCloseError(null); }}
+                          className="flex-1 rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
+                        />
+                        <button
+                          disabled={!closePrice || parseFloat(closePrice) <= 0}
+                          onClick={() => closeTrade(trade.id, parseFloat(closePrice))}
+                          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+                        >
+                          Close
+                        </button>
+                        <button
+                          onClick={() => { setClosingId(null); setClosePrice(""); setCloseError(null); }}
+                          className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-muted"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      {closePrice && !closeError && (() => {
+                        const w = unusualExitPriceWarning(parseFloat(closePrice), trade.targetPrice, trade.stopPrice);
+                        return w ? <p className="text-xs text-warning">⚠ {w}</p> : null;
+                      })()}
+                      {closeError && closingId === trade.id && (
+                        <p className="text-xs text-danger">{closeError}</p>
+                      )}
                     </div>
                   ) : (
                     <button

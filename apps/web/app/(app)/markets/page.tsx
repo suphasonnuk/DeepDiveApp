@@ -58,7 +58,8 @@ export default function SignalsPage() {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
-  const [paperTradeStatus, setPaperTradeStatus] = useState<Record<number, "idle" | "opening" | "done">>({});
+  const [paperTradeStatus, setPaperTradeStatus] = useState<Record<number, "idle" | "opening" | "done" | "error">>({});
+  const [scanError, setScanError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/signals?active=true&limit=30")
@@ -71,9 +72,10 @@ export default function SignalsPage() {
   async function scanPortfolio() {
     if (!address || !chain) return;
     setScanning(true);
+    setScanError(null);
     try {
       const portRes = await fetch(`/api/portfolio?address=${address}&chainId=${chain.id}`);
-      if (!portRes.ok) throw new Error("portfolio unavailable");
+      if (!portRes.ok) throw new Error("Portfolio fetch failed — check wallet connection");
       const port = await portRes.json();
 
       const STABLES = new Set(["USDC", "USDT", "DAI", "BUSD", "FRAX"]);
@@ -87,13 +89,15 @@ export default function SignalsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tokens }),
       });
-      if (!sigRes.ok) throw new Error("signal generation failed");
+      if (!sigRes.ok) throw new Error("Signal generation failed — is the quant engine running?");
       const sigData = await sigRes.json();
 
       setSignals((prev) => {
         const newIds = new Set<number>((sigData.signals ?? []).map((s: QuantSignal) => s.id));
         return [...(sigData.signals ?? []), ...prev.filter((s) => !newIds.has(s.id))];
       });
+    } catch (e) {
+      setScanError((e as Error).message);
     } finally {
       setScanning(false);
     }
@@ -101,22 +105,27 @@ export default function SignalsPage() {
 
   async function openPaperTrade(signal: QuantSignal) {
     setPaperTradeStatus((s) => ({ ...s, [signal.id]: "opening" }));
-    await fetch("/api/performance/trades", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        signalId: signal.id,
-        symbol: signal.symbol,
-        signal: signal.signal,
-        entryPrice: signal.priceAtSignal,
-        positionSizeFraction: signal.kellyFraction ?? 0.05,
-        targetPrice: signal.targetPrice ?? signal.priceAtSignal,
-        stopPrice: signal.stopPrice ?? signal.priceAtSignal,
-        confidence: signal.confidence,
-        regime: signal.regime,
-      }),
-    });
-    setPaperTradeStatus((s) => ({ ...s, [signal.id]: "done" }));
+    try {
+      const res = await fetch("/api/performance/trades", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signalId: signal.id,
+          symbol: signal.symbol,
+          signal: signal.signal,
+          entryPrice: signal.priceAtSignal,
+          positionSizeFraction: signal.kellyFraction ?? 0.05,
+          targetPrice: signal.targetPrice ?? signal.priceAtSignal,
+          stopPrice: signal.stopPrice ?? signal.priceAtSignal,
+          confidence: signal.confidence,
+          regime: signal.regime,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setPaperTradeStatus((s) => ({ ...s, [signal.id]: "done" }));
+    } catch {
+      setPaperTradeStatus((s) => ({ ...s, [signal.id]: "error" }));
+    }
   }
 
   const buySignals = signals.filter((s) => s.signal === "BUY");
@@ -126,7 +135,7 @@ export default function SignalsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Signals</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Signals</h1>
         <button
           onClick={scanPortfolio}
           disabled={scanning || !address}
@@ -141,19 +150,28 @@ export default function SignalsPage() {
         <p className="text-sm text-text-muted">Connect wallet to scan your portfolio for signals.</p>
       )}
 
-      {/* Summary counts */}
+      {scanError && (
+        <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {scanError}
+        </p>
+      )}
+
+      {/* Summary bar — inline counts, not card grid */}
       {signals.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: "BUY",  count: buySignals.length,  color: "text-success" },
-            { label: "SELL", count: sellSignals.length, color: "text-danger" },
-            { label: "HOLD", count: holdSignals.length, color: "text-warning" },
-          ].map(({ label, count, color }) => (
-            <div key={label} className="rounded-lg border border-border bg-surface p-3 text-center">
-              <p className={`text-lg font-bold ${color}`}>{count}</p>
-              <p className="text-xs text-text-muted">{label}</p>
-            </div>
-          ))}
+        <div className="flex items-baseline gap-6 border-b border-border pb-4">
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-display text-2xl font-bold text-success">{buySignals.length}</span>
+            <span className="text-xs uppercase tracking-widest text-text-muted">Buy</span>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-display text-2xl font-bold text-danger">{sellSignals.length}</span>
+            <span className="text-xs uppercase tracking-widest text-text-muted">Sell</span>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-display text-2xl font-bold text-warning">{holdSignals.length}</span>
+            <span className="text-xs uppercase tracking-widest text-text-muted">Hold</span>
+          </div>
+          <span className="ml-auto text-xs text-text-muted">{signals.length} signals</span>
         </div>
       )}
 
@@ -204,8 +222,8 @@ export default function SignalsPage() {
                 <div className="text-right">
                   <p className="text-sm font-medium">{fmt(signal.priceAtSignal)}</p>
                   {signal.kellyFraction != null && (
-                    <p className="text-xs text-text-muted">
-                      Kelly {(signal.kellyFraction * 100).toFixed(1)}%
+                    <p className="text-xs text-text-muted" title="Kelly Criterion: optimal position size as fraction of portfolio">
+                      Size {(signal.kellyFraction * 100).toFixed(1)}%
                     </p>
                   )}
                 </div>
@@ -213,50 +231,80 @@ export default function SignalsPage() {
 
               {isOpen && (
                 <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
+                  {/* Kalman filter rationale — plain English first, abbreviations second */}
+                  {signal.kalmanReason && (
+                    <p className="text-sm leading-relaxed text-text-secondary">
+                      {signal.kalmanReason}
+                    </p>
+                  )}
+
+                  {/* Risk levels from Kelly + OU price targets */}
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="rounded-lg bg-surface-elevated p-3">
-                      <p className="text-xs text-text-muted">Target</p>
+                      <p className="text-xs text-text-muted">Take Profit</p>
                       <p className="font-semibold text-success">{fmt(signal.targetPrice)}</p>
                       <p className="text-xs text-success">{pct(signal.targetPct)}</p>
                     </div>
                     <div className="rounded-lg bg-surface-elevated p-3">
-                      <p className="text-xs text-text-muted">Stop</p>
+                      <p className="text-xs text-text-muted">Stop Loss</p>
                       <p className="font-semibold text-danger">{fmt(signal.stopPrice)}</p>
                       <p className="text-xs text-danger">{pct(signal.stopPct, true)}</p>
                     </div>
                   </div>
 
-                  <div className="flex gap-4 text-xs text-text-muted">
-                    <span>
-                      <span className="font-medium text-text-secondary">R/R: </span>
-                      {signal.riskRewardRatio?.toFixed(2) ?? "--"}
-                    </span>
-                    <span>
-                      <span className="font-medium text-text-secondary">Δ: </span>
-                      {signal.delta != null ? (signal.delta >= 0 ? `+${signal.delta}` : signal.delta) : "--"}
-                    </span>
+                  {/* Model evidence — full labels, units, threshold context */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+                    {signal.riskRewardRatio != null && (
+                      <div>
+                        <p className="text-text-muted">Risk / Reward</p>
+                        <p className="font-medium text-text-secondary">{signal.riskRewardRatio.toFixed(2)}×</p>
+                      </div>
+                    )}
                     {signal.ouZScore != null && (
-                      <span>
-                        <span className="font-medium text-text-secondary">z: </span>
-                        {signal.ouZScore.toFixed(2)}
-                      </span>
+                      <div title="OU Z-Score: standard deviations from mean-reverting fair value. |z| > 1.5 triggers signal.">
+                        <p className="text-text-muted">OU Z-Score</p>
+                        <p className={`font-medium ${
+                          signal.ouZScore < -1.5 ? "text-success"
+                          : signal.ouZScore > 1.5 ? "text-danger"
+                          : "text-text-secondary"
+                        }`}>
+                          {signal.ouZScore > 0 ? "+" : ""}{signal.ouZScore.toFixed(2)}σ
+                        </p>
+                      </div>
                     )}
                     {signal.ouHalfLifeDays != null && (
-                      <span>HL {signal.ouHalfLifeDays.toFixed(0)}d</span>
+                      <div title="Mean-reversion half-life: expected days for price to close half the gap to fair value.">
+                        <p className="text-text-muted">Mean-Rev Half-Life</p>
+                        <p className="font-medium text-text-secondary">{signal.ouHalfLifeDays.toFixed(0)} days</p>
+                      </div>
+                    )}
+                    {signal.delta != null && (
+                      <div title="Net delta: directional exposure of this signal position.">
+                        <p className="text-text-muted">Net Delta</p>
+                        <p className="font-medium text-text-secondary">
+                          {signal.delta === 0 ? "Neutral" : signal.delta > 0 ? `+${signal.delta}` : signal.delta}
+                        </p>
+                      </div>
                     )}
                   </div>
 
-                  {signal.kalmanReason && (
-                    <p className="text-xs italic text-text-muted">{signal.kalmanReason}</p>
-                  )}
-
                   {signal.signal !== "HOLD" && (
                     <button
-                      disabled={tradeStatus !== "idle"}
+                      disabled={tradeStatus === "opening" || tradeStatus === "done"}
                       onClick={() => openPaperTrade(signal)}
-                      className="w-full rounded-lg bg-accent/10 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+                      className={`w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                        tradeStatus === "error"
+                          ? "bg-danger/10 text-danger hover:bg-danger/20"
+                          : "bg-accent/10 text-accent hover:bg-accent/20"
+                      }`}
                     >
-                      {tradeStatus === "opening" ? "Opening..." : tradeStatus === "done" ? "Trade Opened ✓" : "Open Paper Trade"}
+                      {tradeStatus === "opening"
+                        ? "Opening..."
+                        : tradeStatus === "done"
+                          ? "Trade Opened ✓"
+                          : tradeStatus === "error"
+                            ? "Failed — tap to retry"
+                            : "Open Paper Trade"}
                     </button>
                   )}
                 </div>

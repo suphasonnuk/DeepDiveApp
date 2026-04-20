@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
-import Link from "next/link";
 
 interface TokenHolding {
   symbol: string;
@@ -81,7 +80,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Portfolio</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Portfolio</h1>
         {isConnected && (
           <button
             onClick={fetchPortfolio}
@@ -110,7 +109,7 @@ export default function DashboardPage() {
           {loading && !portfolio ? (
             <div className="mt-2 h-8 w-40 animate-pulse rounded bg-surface-elevated" />
           ) : (
-            <p className="mt-1 text-3xl font-bold">
+            <p className="font-display mt-1 text-5xl font-bold tracking-tight">
               {portfolio ? fmt(portfolio.totalValueUsd) : "--"}
             </p>
           )}
@@ -191,25 +190,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Quick links */}
-      {isConnected && (
-        <div className="grid grid-cols-2 gap-3">
-          <Link
-            href="/markets"
-            className="flex flex-col items-center rounded-xl border border-border bg-surface p-4 text-center transition-colors hover:border-accent/40"
-          >
-            <p className="font-medium">Signals</p>
-            <p className="mt-0.5 text-xs text-text-muted">Quant recommendations</p>
-          </Link>
-          <Link
-            href="/trades"
-            className="flex flex-col items-center rounded-xl border border-border bg-surface p-4 text-center transition-colors hover:border-accent/40"
-          >
-            <p className="font-medium">Performance</p>
-            <p className="mt-0.5 text-xs text-text-muted">Paper trading results</p>
-          </Link>
-        </div>
-      )}
     </div>
   );
 }
