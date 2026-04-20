@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@deepdive/db";
 import { quantSignals } from "@deepdive/db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq } from "@deepdive/db";
 
 const QUANT_ENGINE_URL = process.env.QUANT_ENGINE_URL ?? "http://localhost:8000";
 

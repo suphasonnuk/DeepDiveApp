@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@deepdive/db";
 import { paperTrades } from "@deepdive/db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq } from "@deepdive/db";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

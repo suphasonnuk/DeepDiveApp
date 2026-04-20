@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@deepdive/db";
 import { paperTrades } from "@deepdive/db";
-import { eq } from "drizzle-orm";
+import { eq } from "@deepdive/db";
 
 export async function PUT(
   request: NextRequest,
