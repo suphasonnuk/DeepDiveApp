@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
   // Persist signals to DB
   const inserted = [];
   for (const s of rawSignals) {
-    if (s.signal === "HOLD" && (s.confidence as number) < 0.3) continue;
     if (s.error) continue;
 
     const risk = s.risk as Record<string, unknown>;

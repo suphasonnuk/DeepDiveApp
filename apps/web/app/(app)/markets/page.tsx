@@ -28,6 +28,12 @@ interface PortfolioToken {
   symbol: string;
 }
 
+const QUICK_SCAN_TOKENS = [
+  { symbol: "BTC" }, { symbol: "ETH" }, { symbol: "ARB" },
+  { symbol: "OP" }, { symbol: "LINK" }, { symbol: "UNI" },
+  { symbol: "AAVE" }, { symbol: "MKR" },
+];
+
 const SIGNAL_STYLE: Record<string, { label: string; bg: string; text: string; border: string }> = {
   BUY:  { label: "BUY",  bg: "bg-success/15",  text: "text-success",  border: "border-success/30" },
   SELL: { label: "SELL", bg: "bg-danger/15",   text: "text-danger",   border: "border-danger/30" },
@@ -60,6 +66,7 @@ export default function SignalsPage() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [paperTradeStatus, setPaperTradeStatus] = useState<Record<number, "idle" | "opening" | "done" | "error">>({});
   const [scanError, setScanError] = useState<string | null>(null);
+  const [scanInfo, setScanInfo] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/signals?active=true&limit=30")
@@ -69,21 +76,11 @@ export default function SignalsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function scanPortfolio() {
-    if (!address || !chain) return;
+  async function runScan(tokens: PortfolioToken[], label: string) {
     setScanning(true);
     setScanError(null);
+    setScanInfo(null);
     try {
-      const portRes = await fetch(`/api/portfolio?address=${address}&chainId=${chain.id}`);
-      if (!portRes.ok) throw new Error("Portfolio fetch failed — check wallet connection");
-      const port = await portRes.json();
-
-      const STABLES = new Set(["USDC", "USDT", "DAI", "BUSD", "FRAX"]);
-      const tokens: PortfolioToken[] = [port.nativeToken, ...(port.tokens ?? [])]
-        .filter((t: PortfolioToken) => t?.symbol && !STABLES.has(t.symbol));
-
-      if (!tokens.length) return;
-
       const sigRes = await fetch("/api/signals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,7 +88,8 @@ export default function SignalsPage() {
       });
       if (!sigRes.ok) throw new Error("Signal generation failed — is the quant engine running?");
       const sigData = await sigRes.json();
-
+      const count = sigData.signals?.length ?? 0;
+      setScanInfo(`${label}: ${count} signal${count !== 1 ? "s" : ""} generated`);
       setSignals((prev) => {
         const newIds = new Set<number>((sigData.signals ?? []).map((s: QuantSignal) => s.id));
         return [...(sigData.signals ?? []), ...prev.filter((s) => !newIds.has(s.id))];
@@ -101,6 +99,29 @@ export default function SignalsPage() {
     } finally {
       setScanning(false);
     }
+  }
+
+  async function scanPortfolio() {
+    if (!address || !chain) return;
+    const STABLES = new Set(["USDC", "USDT", "DAI", "BUSD", "FRAX"]);
+    try {
+      const portRes = await fetch(`/api/portfolio?address=${address}&chainId=${chain.id}`);
+      if (!portRes.ok) throw new Error("Portfolio fetch failed — check wallet connection");
+      const port = await portRes.json();
+      const tokens: PortfolioToken[] = [port.nativeToken, ...(port.tokens ?? [])]
+        .filter((t: PortfolioToken) => t?.symbol && !STABLES.has(t.symbol));
+      if (!tokens.length) {
+        setScanError("No tokens found in wallet. Try Quick Scan instead.");
+        return;
+      }
+      await runScan(tokens, "Portfolio scan");
+    } catch (e) {
+      setScanError((e as Error).message);
+    }
+  }
+
+  async function quickScan() {
+    await runScan(QUICK_SCAN_TOKENS, "Quick scan");
   }
 
   async function openPaperTrade(signal: QuantSignal) {
@@ -136,23 +157,37 @@ export default function SignalsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold tracking-tight">Signals</h1>
-        <button
-          onClick={scanPortfolio}
-          disabled={scanning || !address}
-          title={!address ? "Connect wallet first" : undefined}
-          className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
-        >
-          {scanning ? "Scanning..." : "Scan Portfolio"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={quickScan}
+            disabled={scanning}
+            className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-surface disabled:opacity-40"
+          >
+            {scanning ? "Scanning..." : "Quick Scan"}
+          </button>
+          <button
+            onClick={scanPortfolio}
+            disabled={scanning || !address}
+            title={!address ? "Connect wallet first" : undefined}
+            className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+          >
+            {scanning ? "Scanning..." : "Scan Portfolio"}
+          </button>
+        </div>
       </div>
 
       {!address && (
-        <p className="text-sm text-text-muted">Connect wallet to scan your portfolio for signals.</p>
+        <p className="text-sm text-text-muted">Connect wallet to scan your portfolio, or use Quick Scan for popular tokens.</p>
       )}
 
       {scanError && (
         <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
           {scanError}
+        </p>
+      )}
+      {scanInfo && (
+        <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-secondary">
+          {scanInfo}
         </p>
       )}
 
