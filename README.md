@@ -1,40 +1,28 @@
-# DeepDive — Copy Trading Platform
+# DeepDive — Wallet Dashboard + Quant Signal Platform
 
-Track profitable wallet addresses on-chain and replicate their trades with your approval.
+Personal single-user app that shows your connected wallet's portfolio (tokens + LP positions), generates buy/sell/hold signals using pure mathematical quant models, and tracks paper trading performance.
 
-**Deploy to GCP Cloud Run in ~20 minutes.**  
-See [DEPLOY.md](DEPLOY.md) for the full step-by-step guide including credential setup.
+See [DEPLOY.md](DEPLOY.md) for the full step-by-step deployment guide.
 
-## Quick Deploy
+## What It Does
 
-```bash
-gcloud builds submit --config=cloudbuild.yaml
-```
+- **Dashboard** — Connected wallet token balances + LP positions + total USD value
+- **Signals** — Quant buy/sell/hold signals with confidence, R/R ratio, Kelly fraction, delta
+- **Performance** — Paper trade history, equity curve, Sharpe ratio, win rate, max drawdown
+- **Settings** — Wallet connect, model info, security details
 
-## What's Built
+## Quant Models
 
-### ✅ Phase 1: Foundation (Complete)
-- **Turborepo monorepo** with pnpm workspaces
-- **Next.js 15 web app** with 4-tab mobile-first UI
-- **Passphrase authentication** with Web Crypto API encryption
-- **Wallet connection** (MetaMask, Ledger, Trezor via wagmi)
-- **Multi-chain support** (ETH, Arbitrum, Base, Polygon)
+Signals are derived from rigorous mathematical models — not popular indicators:
 
-### ✅ Phase 2: Copy Trading Infrastructure (Complete)
-- **Turso database** with Drizzle ORM for tracking:
-  - Tracked wallet addresses
-  - On-chain transactions detected
-  - Token metadata & prices
-  - Your executed copy trades
-- **Trade.xyz integration** — DEX aggregator API client
-- **Hyperliquid integration** — Perpetual futures DEX client  
-- **Python quant engine** (FastAPI) for wallet performance analysis
+| Model | Purpose |
+|-------|---------|
+| Kalman Filter | State estimation: fair value + price velocity |
+| Ornstein-Uhlenbeck | Mean-reversion SDE, z-score entry/exit |
+| HMM (3-state) | Regime detection: BULL / BEAR / SIDEWAYS |
+| Kelly Criterion | Optimal position sizing (half-Kelly, max 25%) |
 
-### 🚧 Phase 3: Next Steps
-- On-chain transaction monitoring service (watch wallets for new trades)
-- Wallet performance analytics (win rate, Sharpe ratio)
-- Copy trade signal generation
-- Trade execution UI in Trades tab
+Regime-adaptive weighting: BULL favors Kalman (momentum), SIDEWAYS favors OU (mean-reversion).
 
 ## Quick Start
 
@@ -46,21 +34,22 @@ pnpm install
 
 ### 2. Set Up Environment Variables
 
-Copy `.env.example` to `.env.local` in `apps/web`:
+Copy `.env.example` to `.env` at the project root and fill in your values:
 
 ```bash
-cp .env.example apps/web/.env.local
+cp .env.example .env
 ```
 
 **Required:**
 - `JWT_SECRET` — Generate with `openssl rand -hex 32`
 - `TURSO_DATABASE_URL` — Create at [turso.tech](https://turso.tech)
 - `TURSO_AUTH_TOKEN` — From Turso dashboard
+- `QUICKNODE_URL` — Your QuickNode RPC endpoint
 
 **Optional:**
+- `COVALENT_API_KEY` — Free at [covalenthq.com](https://www.covalenthq.com) — enables ERC-20 balance discovery
 - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` — From [cloud.walletconnect.com](https://cloud.walletconnect.com)
-- `NEXT_PUBLIC_RPC_*` — Alchemy/Infura RPC endpoints (or use public RPCs)
-- `NEXT_PUBLIC_TRADEXYZ_API_KEY` — From Trade.xyz
+- `QUANT_ENGINE_URL` — Python FastAPI URL (default: `http://localhost:8000`)
 
 ### 3. Push Database Schema
 
@@ -68,6 +57,8 @@ cp .env.example apps/web/.env.local
 cd packages/db
 pnpm db:push
 ```
+
+You should see these tables created: `tokens`, `token_prices`, `quant_signals`, `paper_trades`
 
 ### 4. Start Dev Server
 
@@ -77,118 +68,85 @@ pnpm dev
 
 App runs at http://localhost:3000
 
-### 5. Start Quant Engine (Optional)
+### 5. Start Quant Engine (for signal generation)
 
 ```bash
 cd services/quant-engine
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env
 uvicorn app.main:app --reload --port 8000
 ```
 
 Engine runs at http://localhost:8000 (docs at `/docs`)
 
-## Usage
-
-### Add Wallets to Track
-
-```bash
-curl -X POST http://localhost:3000/api/wallets \
-  -H "Content-Type: application/json" \
-  -d '{
-    "address": "0x...",
-    "chainId": 1,
-    "label": "Smart Money Wallet #1",
-    "copyEnabled": true
-  }'
-```
-
-### Get Swap Quotes
-
-```bash
-curl "http://localhost:3000/api/swap/quote?\
-tokenIn=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&\
-tokenOut=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&\
-amountIn=1000000000000000000&\
-recipient=0x...&\
-chainId=1&\
-slippageBps=50"
-```
-
-Returns quotes from both Trade.xyz and Hyperliquid with the best route.
-
 ## Architecture
 
 ```
-apps/web/              → Next.js frontend + API routes
+apps/web/              → Next.js 15 (App Router)
   ├── app/
   │   ├── (auth)/login/       → Passphrase login
   │   ├── (app)/              → Authenticated shell
-  │   │   ├── dashboard/      → Portfolio overview
-  │   │   ├── markets/        → Token prices & charts
-  │   │   ├── trades/         → Copy trade signals & history
-  │   │   └── settings/       → Wallet connection, tracked addresses
+  │   │   ├── dashboard/      → Portfolio: tokens + LP positions
+  │   │   ├── markets/        → Quant signals
+  │   │   ├── trades/         → Paper trade history + performance
+  │   │   └── settings/       → Wallet connect + info
   │   ├── api/
-  │   │   ├── auth/           → Login/logout
-  │   │   ├── wallets/        → Manage tracked wallets
-  │   │   └── swap/           → DEX quotes & execution
-  │   └── middleware.ts       → Auth gate
+  │   │   ├── auth/           → Login/logout (JWT)
+  │   │   ├── portfolio/      → Wallet balances via QuickNode + Covalent
+  │   │   ├── signals/        → Signal list + portfolio scan
+  │   │   └── performance/    → Metrics + paper trades
+  │   └── middleware.ts       → JWT auth gate
 
 packages/
-  ├── crypto/          → Web Crypto API encryption vault
-  ├── chains/          → Viem multi-chain registry
-  └── db/              → Turso + Drizzle schema
+  ├── crypto/          → Web Crypto API encryption vault (AES-256-GCM)
+  ├── chains/          → Viem multi-chain registry (ETH, ARB, Base, Polygon)
+  └── db/              → Turso + Drizzle ORM schema
 
-services/quant-engine/ → Python FastAPI analytics
-  └── app/main.py      → Wallet performance & signals
+services/quant-engine/ → Python FastAPI
+  ├── app/models/      → kalman.py, ou_process.py, hmm_regime.py, kelly.py
+  ├── app/signals/     → generator.py (orchestrates all models)
+  ├── app/data/        → fetchers.py (Binance primary, CoinGecko fallback)
+  └── app/performance/ → tracker.py (paper trades + metrics)
 ```
 
 ## Data Flow
 
-1. **User adds wallet** → Stored in `tracked_wallets` table
-2. **Monitor on-chain** (TODO) → Detect DEX swaps via event logs
-3. **Store trades** → `wallet_transactions` table
-4. **Quant engine analyzes** → Win rate, Sharpe ratio, signals
-5. **Signal appears in Trades tab** → User reviews & approves
-6. **Execute swap** → wagmi signs tx, submitted on-chain
-7. **Record result** → Stored in `copy_trades` table
+1. **Wallet connected** → QuickNode RPC fetches native balance; Covalent fetches ERC-20s
+2. **Scan Portfolio** → tokens sent to quant engine batch endpoint
+3. **Quant engine** → Kalman + OU + HMM + Kelly → regime-weighted signal per token
+4. **Signal persisted** → stored in `quant_signals` table in Turso
+5. **Open Paper Trade** → entry recorded in `paper_trades` table
+6. **Performance tab** → Sharpe ratio, win rate, max drawdown, equity curve
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|-----------|
-| Frontend | Next.js 15 + React 19 + Tailwind CSS |
-| Wallet | wagmi v2 (Viem-based) |
+| Frontend | Next.js 15 + React 19 + Tailwind CSS 4 |
+| Wallet | wagmi v2 + Viem (MetaMask, WalletConnect) |
 | Database | Turso (edge SQLite) + Drizzle ORM |
-| Blockchain | Viem (EVM chains) |
-| DEXs | Trade.xyz + Hyperliquid APIs |
-| Analytics | Python FastAPI + pandas/numpy |
-| Hosting | GCP Cloud Run (web + quant engine) |
+| Blockchain data | QuickNode RPC + Covalent API |
+| Price data | Binance public API + CoinGecko (fallback) |
+| Quant engine | Python FastAPI + numpy + scipy + hmmlearn |
+| Hosting | Vercel (web) or GCP Cloud Run |
 
 ## Security
 
-- **Passphrase-based auth** — PBKDF2 (600k iterations) derives encryption key
-- **Local encryption** — AES-256-GCM for all sensitive data in IndexedDB
+- **Passphrase auth** — PBKDF2 (600k iterations) derives AES-256-GCM encryption key
+- **Local encryption** — All sensitive data encrypted in browser IndexedDB via `@deepdive/crypto`
 - **Wallet signing** — Private keys never leave your wallet device
-- **Server isolation** — Cloud only stores public data (prices, on-chain txs)
+- **Server isolation** — Cloud never stores which tokens you hold (Tier 2 data stays local)
+
+## Data Classification
+
+- **Cloud OK**: Token prices, quant signals, paper trade history, performance metrics
+- **Local only (encrypted)**: Wallet keys, portfolio holdings
+- **In-memory only**: Portfolio valuations, live P&L
 
 ## Deployment
 
-### GCP Cloud Run (Recommended)
-
-See [DEPLOY.md](DEPLOY.md) for the full guide (credentials + deploy + troubleshooting).
-
-Estimated cost: **$12–23/month** (pay only for actual usage)
-
-### Known Issues
-
-Local `pnpm build` fails due to libSQL native dependency bundling — this does **not** affect Cloud Run. Use `pnpm dev` locally. See Troubleshooting section in [DEPLOY.md](DEPLOY.md).
-
-## Contributing
-
-This is a personal single-user app. The architecture enforces one user only (no multi-tenancy).
+See [DEPLOY.md](DEPLOY.md) for the full Windows/PowerShell guide including GCP Cloud Run setup.
 
 ## License
 

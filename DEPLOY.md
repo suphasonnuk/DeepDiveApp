@@ -14,7 +14,6 @@ All commands are written for **PowerShell** on Windows.
 - [ ] `gcloud` CLI installed → https://cloud.google.com/sdk/docs/install
 - [ ] QuickNode account (free tier) → https://quicknode.com
 - [ ] Turso database (web dashboard, no CLI) → https://app.turso.tech
-- [ ] Moralis account (free) → https://admin.moralis.io/register
 - [ ] Covalent account (free) → https://www.covalenthq.com/platform/auth/register/
 
 ---
@@ -25,7 +24,7 @@ Keep a text file open to paste values as you go. You need them in Step 3.
 
 ### 1A. Turso Database (5 min)
 
-Turso is the SQLite cloud database that stores wallets, transactions, and signals.
+Turso is the SQLite cloud database that stores quant signals and paper trade history.
 
 **Use the web dashboard (no CLI needed):**
 
@@ -40,9 +39,9 @@ Save:
 
 ---
 
-### 1B. QuickNode RPC Endpoints (10 min) — RECOMMENDED
+### 1B. QuickNode RPC Endpoint (5 min)
 
-QuickNode provides fast, reliable RPC endpoints with enhanced APIs for transaction history and token metadata. **Replaces the need for Etherscan API keys** (Step 1E).
+QuickNode provides fast RPC for reading wallet balances and on-chain data.
 
 **Free tier:** 300M requests/month — more than enough for personal use.
 
@@ -50,33 +49,20 @@ QuickNode provides fast, reliable RPC endpoints with enhanced APIs for transacti
 2. Click **Create Endpoint**
 3. Select **Ethereum** → **Mainnet** → Create
 4. Copy the **HTTP Provider** URL (looks like `https://your-name.quiknode.pro/xxx/`)
-5. Repeat for **Arbitrum**, **Base**, and **Polygon**
+5. Repeat for **Arbitrum**, **Base**, and **Polygon** if needed
 
 Save:
-- `NEXT_PUBLIC_RPC_ETHEREUM` = Your Ethereum endpoint URL
-- `NEXT_PUBLIC_RPC_ARBITRUM` = Your Arbitrum endpoint URL  
+- `QUICKNODE_URL` = Your primary Ethereum endpoint URL
+- `NEXT_PUBLIC_RPC_ETHEREUM` = Same URL (used client-side by wagmi)
+- `NEXT_PUBLIC_RPC_ARBITRUM` = Your Arbitrum endpoint URL
 - `NEXT_PUBLIC_RPC_BASE` = Your Base endpoint URL
 - `NEXT_PUBLIC_RPC_POLYGON` = Your Polygon endpoint URL
 
-> **Why QuickNode?** The app uses QuickNode's RPC to fetch transaction history, token metadata, and DEX swap events — eliminating dependency on Etherscan rate limits.
-
 ---
 
-### 1C. Moralis API Key (3 min)
+### 1C. Covalent API Key (3 min)
 
-Moralis provides portfolio value and trading activity data for smart money discovery.
-
-1. Sign up: https://admin.moralis.io/register
-2. Create a new project (any name)
-3. Go to the project → copy the **API Key**
-
-Save: `MORALIS_API_KEY`
-
----
-
-### 1D. Covalent API Key (3 min)
-
-Covalent provides top token holder data for whale discovery.
+Covalent provides ERC-20 token balance discovery for the portfolio dashboard.
 
 1. Sign up: https://www.covalenthq.com/platform/auth/register/
 2. Go to **API Keys** in the dashboard
@@ -86,12 +72,12 @@ Save: `COVALENT_API_KEY`
 
 ---
 
-### 1E. JWT Secret (1 min)
+### 1D. JWT Secret (1 min)
 
-This is used to sign authentication tokens. Generate it locally — never share it.
+Used to sign authentication tokens. Generate locally — never share it.
 
 ```powershell
-# Run this in PowerShell — outputs a 64-character hex string
+# Run in PowerShell — outputs a 64-character hex string
 [System.BitConverter]::ToString(
     [System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)
 ).Replace('-','').ToLower()
@@ -101,20 +87,7 @@ Save: `JWT_SECRET` = the output string
 
 ---
 
-### 1F. Block Explorer API Keys (OPTIONAL — Skip if using QuickNode)
-
-**Note:** QuickNode RPC (Step 1B) already handles transaction history. These are only needed as a fallback.
-
-| Chain | Sign up | Save as |
-|-------|---------|---------|
-| Ethereum | https://etherscan.io/register → API-KEYs | `ETHERSCAN_API_KEY` |
-| Arbitrum | https://arbiscan.io/register → API-KEYs | `ARBISCAN_API_KEY` |
-| Base | https://basescan.org/register → API-KEYs | `BASESCAN_API_KEY` |
-| Polygon | https://polygonscan.com/register → API-KEYs | `POLYGONSCAN_API_KEY` |
-
----
-
-### 1G. WalletConnect Project ID (Optional, 3 min)
+### 1E. WalletConnect Project ID (Optional, 3 min)
 
 Required only for mobile wallet support (MetaMask mobile, Trust Wallet, etc.).
 
@@ -155,7 +128,7 @@ gcloud services enable `
 
 ## Step 3 — Store Secrets in GCP Secret Manager
 
-**First, paste this helper function into PowerShell** (run once per session — it handles the temp-file trick that Windows needs to pipe values cleanly to gcloud):
+**First, paste this helper function into PowerShell** (run once per session):
 
 ```powershell
 function Set-GcpSecret($Name, $Value) {
@@ -169,27 +142,24 @@ function Set-GcpSecret($Name, $Value) {
 **Required secrets — replace each `YOUR_*` with your actual values:**
 
 ```powershell
-Set-GcpSecret "TURSO_DATABASE_URL" "YOUR_TURSO_DATABASE_URL"
-Set-GcpSecret "TURSO_AUTH_TOKEN"   "YOUR_TURSO_AUTH_TOKEN"
-Set-GcpSecret "JWT_SECRET"         "YOUR_JWT_SECRET"
-Set-GcpSecret "MORALIS_API_KEY"    "YOUR_MORALIS_API_KEY"
-Set-GcpSecret "COVALENT_API_KEY"   "YOUR_COVALENT_API_KEY"
+Set-GcpSecret "TURSO_DATABASE_URL"    "YOUR_TURSO_DATABASE_URL"
+Set-GcpSecret "TURSO_AUTH_TOKEN"      "YOUR_TURSO_AUTH_TOKEN"
+Set-GcpSecret "JWT_SECRET"            "YOUR_JWT_SECRET"
+Set-GcpSecret "QUICKNODE_URL"         "YOUR_QUICKNODE_URL"
+Set-GcpSecret "COVALENT_API_KEY"      "YOUR_COVALENT_API_KEY"
 
-# QuickNode RPC endpoints (public, but storing as secrets for consistency)
+# QuickNode RPC endpoints (used client-side by wagmi)
 Set-GcpSecret "NEXT_PUBLIC_RPC_ETHEREUM"  "YOUR_QUICKNODE_ETHEREUM_URL"
 Set-GcpSecret "NEXT_PUBLIC_RPC_ARBITRUM"  "YOUR_QUICKNODE_ARBITRUM_URL"
 Set-GcpSecret "NEXT_PUBLIC_RPC_BASE"      "YOUR_QUICKNODE_BASE_URL"
 Set-GcpSecret "NEXT_PUBLIC_RPC_POLYGON"   "YOUR_QUICKNODE_POLYGON_URL"
 ```
 
-**Optional secrets (skip if you don't have them yet):**
+**Optional secrets:**
 
 ```powershell
-Set-GcpSecret "ETHERSCAN_API_KEY"        "YOUR_ETHERSCAN_API_KEY"
-Set-GcpSecret "ARBISCAN_API_KEY"         "YOUR_ARBISCAN_API_KEY"
-Set-GcpSecret "BASESCAN_API_KEY"         "YOUR_BASESCAN_API_KEY"
-Set-GcpSecret "POLYGONSCAN_API_KEY"      "YOUR_POLYGONSCAN_API_KEY"
-Set-GcpSecret "WALLETCONNECT_PROJECT_ID" "YOUR_WALLETCONNECT_ID"
+Set-GcpSecret "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID" "YOUR_WALLETCONNECT_ID"
+Set-GcpSecret "QUANT_ENGINE_URL"                     "YOUR_QUANT_ENGINE_URL"
 ```
 
 **Grant Cloud Run permission to read secrets:**
@@ -206,13 +176,13 @@ gcloud projects add-iam-policy-binding deepdive-app `
 
 ## Step 4 — Push Database Schema to Turso
 
-**4a. Install dependencies first (from project root):**
+**4a. Install dependencies (from project root):**
 
 ```powershell
 pnpm install
 ```
 
-**4b. Create `packages\db\.env` with your Turso credentials.**
+**4b. Create `packages\db\.env` with your Turso credentials:**
 
 Create the file `packages\db\.env` (NOT `.env.example`) and paste:
 
@@ -233,12 +203,10 @@ pnpm db:push
 Expected output — you should see tables being created:
 ```
 [✓] Changes applied
-  Created table tracked_wallets
-  Created table wallet_transactions
   Created table tokens
   Created table token_prices
-  Created table copy_trades
-  Created table smart_money_signals
+  Created table quant_signals
+  Created table paper_trades
 ```
 
 > If it says "No changes detected", the tables already exist — that's fine.
@@ -270,13 +238,13 @@ gcloud auth configure-docker
 docker build -t gcr.io/deepdive-app/deepdive-web:latest .
 docker push gcr.io/deepdive-app/deepdive-web:latest
 
-# Deploy to Cloud Run (required secrets only)
+# Deploy to Cloud Run
 gcloud run deploy deepdive-web `
   --image=gcr.io/deepdive-app/deepdive-web:latest `
   --region=us-central1 `
   --platform=managed `
   --allow-unauthenticated `
-  --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,MORALIS_API_KEY=MORALIS_API_KEY:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest,NEXT_PUBLIC_RPC_ETHEREUM=NEXT_PUBLIC_RPC_ETHEREUM:latest,NEXT_PUBLIC_RPC_ARBITRUM=NEXT_PUBLIC_RPC_ARBITRUM:latest,NEXT_PUBLIC_RPC_BASE=NEXT_PUBLIC_RPC_BASE:latest,NEXT_PUBLIC_RPC_POLYGON=NEXT_PUBLIC_RPC_POLYGON:latest `
+  --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,QUICKNODE_URL=QUICKNODE_URL:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest,NEXT_PUBLIC_RPC_ETHEREUM=NEXT_PUBLIC_RPC_ETHEREUM:latest,NEXT_PUBLIC_RPC_ARBITRUM=NEXT_PUBLIC_RPC_ARBITRUM:latest,NEXT_PUBLIC_RPC_BASE=NEXT_PUBLIC_RPC_BASE:latest,NEXT_PUBLIC_RPC_POLYGON=NEXT_PUBLIC_RPC_POLYGON:latest `
   --memory=2Gi `
   --cpu=2 `
   --timeout=300 `
@@ -287,9 +255,9 @@ gcloud run deploy deepdive-web `
 
 ---
 
-## Step 6 — Deploy the Quant Engine (Optional)
+## Step 6 — Deploy the Quant Engine (Required for Signals)
 
-The quant engine analyzes wallet performance and generates trade signals. Skip this on first deploy — the web app works without it.
+The quant engine runs Kalman Filter, Ornstein-Uhlenbeck, HMM, and Kelly Criterion models to generate buy/sell/hold signals. Without it, the Signals tab will show empty.
 
 ```powershell
 cd services\quant-engine
@@ -334,18 +302,16 @@ gcloud run services describe deepdive-web `
 
 Output looks like: `https://deepdive-web-abc123-uc.a.run.app`
 
-Open that URL in your browser.
-
 ---
 
 ## Step 8 — First Login
 
 1. Open your app URL
-2. **Type any passphrase** — this becomes your login. It also derives an encryption key (AES-256-GCM) that protects sensitive data in your browser. **Remember it** — if you use a different passphrase next time, your encrypted local data won't decrypt.
+2. **Type any passphrase** — this becomes your login. It also derives an AES-256-GCM encryption key that protects sensitive data in your browser. **Remember it** — a different passphrase won't decrypt your local data.
 3. Go to **Settings** → connect your MetaMask wallet
-4. Click **Import Famous Wallets** to seed tracked wallets
-5. Click **Discover (ETH)** or **Discover (ARB)** to find top traders
-6. Check **Dashboard** for signals
+4. Go to **Dashboard** → your token balances will appear
+5. Go to **Signals** → click **Scan Portfolio** to generate quant signals
+6. Go to **Performance** → paper trades and metrics appear after opening trades from the Signals tab
 
 ---
 
@@ -376,15 +342,21 @@ gcloud builds triggers create github `
 
 ## Adding Optional Secrets Later
 
-After creating the secrets in Step 1E/1F, add them to the running service:
-
 ```powershell
+function Update-GcpSecret($Name, $Value) {
+    $tmp = [System.IO.Path]::GetTempFileName()
+    [System.IO.File]::WriteAllText($tmp, $Value)
+    gcloud secrets versions add $Name --data-file=$tmp
+    Remove-Item $tmp
+}
+
+Update-GcpSecret "SECRET_NAME" "NEW_VALUE"
+
+# Apply to running service
 gcloud run services update deepdive-web `
   --region=us-central1 `
-  --update-secrets=ETHERSCAN_API_KEY=ETHERSCAN_API_KEY:latest
+  --update-secrets=SECRET_NAME=SECRET_NAME:latest
 ```
-
-Repeat for each key you want to add.
 
 ---
 
@@ -398,7 +370,7 @@ gcloud builds log BUILD_ID
 Fix: edit `cloudbuild.yaml`, set `machineType: 'E2_HIGHCPU_8'` and `timeout: '1800s'`.
 
 ### "Secret does not exist" error
-You tried to mount a secret that wasn't created. Only mount secrets you've actually created. Use the minimal `--set-secrets` list in the manual deploy command (Step 5).
+You tried to mount a secret that wasn't created. Only mount secrets you've actually created in Step 3.
 
 ### Service won't start (exit code 137 = out of memory)
 ```powershell
@@ -414,15 +386,21 @@ gcloud projects add-iam-policy-binding deepdive-app `
   --role=roles/secretmanager.secretAccessor
 ```
 
-### Database connection error
+### Database connection error — verify tables exist
 ```powershell
+# Install Turso CLI if needed: winget install turso
 turso db shell deepdive-db
 .tables
-# Should show: copy_trades, smart_money_signals, token_prices, tokens, tracked_wallets, wallet_transactions
+# Should show: tokens, token_prices, quant_signals, paper_trades
 ```
 
+### Signals tab is empty after Scan Portfolio
+- Confirm the quant engine is deployed and `QUANT_ENGINE_URL` secret is set
+- Check quant engine logs: `gcloud run services logs tail deepdive-quant-engine --region=us-central1`
+- The engine fetches price data from Binance public API — no API key needed, but it must be reachable
+
 ### Local `pnpm build` fails (libSQL webpack error)
-Known non-blocking issue. The local production build fails because webpack tries to bundle README/LICENSE files from the libSQL native package. This does **not** affect Cloud Run — GCP handles native dependencies correctly. Use `pnpm dev` for local testing.
+Known non-blocking issue. Webpack tries to bundle native libSQL files. This does **not** affect Cloud Run. Use `pnpm dev` for local testing.
 
 ### View live logs
 ```powershell
@@ -442,15 +420,6 @@ gcloud run services describe deepdive-web --region=us-central1
 
 # View recent logs
 gcloud run services logs read deepdive-web --region=us-central1 --limit=100
-
-# Update a secret value (reuse helper from Step 3)
-function Update-GcpSecret($Name, $Value) {
-    $tmp = [System.IO.Path]::GetTempFileName()
-    [System.IO.File]::WriteAllText($tmp, $Value)
-    gcloud secrets versions add $Name --data-file=$tmp
-    Remove-Item $tmp
-}
-Update-GcpSecret "SECRET_NAME" "NEW_VALUE"
 
 # Scale to zero (pause billing)
 gcloud run services update deepdive-web --region=us-central1 --min-instances=0
@@ -473,9 +442,10 @@ gcloud run services delete deepdive-web --region=us-central1
 | Web App (Cloud Run) | $5–10 |
 | Quant Engine (Cloud Run) | $5–10 |
 | Container Registry | $1–2 |
-| Secret Manager (10 secrets) | $0.60 |
+| Secret Manager (~10 secrets) | $0.60 |
 | Turso (free tier) | $0 |
-| API keys (free tiers) | $0 |
+| QuickNode (free tier) | $0 |
+| Covalent (free tier) | $0 |
 | **Total** | **$12–23** |
 
 GCP free tier: 2M requests/month, 360K GB-seconds compute — personal use is often free.
