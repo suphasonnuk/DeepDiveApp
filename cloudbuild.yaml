@@ -26,9 +26,8 @@ steps:
       - --image=gcr.io/$PROJECT_ID/deepdive-quant:latest
       - --region=us-central1
       - --platform=managed
-      - --allow-unauthenticated
+      - --no-allow-unauthenticated
       - --set-secrets=BINANCE_TESTNET_API_KEY=BINANCE_TESTNET_API_KEY:latest,BINANCE_TESTNET_SECRET=BINANCE_TESTNET_SECRET:latest
-      - --set-env-vars=FRONTEND_URL=https://deepdive-web-${_WEB_SERVICE_HASH}-uc.a.run.app
       - --memory=1Gi
       - --cpu=1
       - --timeout=600
@@ -88,7 +87,7 @@ steps:
           --port=8080
     waitFor: [push-web]
 
-  # ── 8. Set public access (separate from deploy to avoid IAM permission errors) ─
+  # ── 8. Grant public access (parallel, non-fatal) ──────────────────────────────
   - id: allow-unauthenticated-web
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: bash
@@ -98,7 +97,7 @@ steps:
         gcloud run services add-iam-policy-binding deepdive-web \
           --region=us-central1 \
           --member="allUsers" \
-          --role="roles/run.invoker" || echo "IAM binding skipped (org policy may restrict allUsers)"
+          --role="roles/run.invoker" || echo "IAM binding skipped"
     waitFor: [deploy-web]
 
   - id: allow-unauthenticated-quant
@@ -110,8 +109,23 @@ steps:
         gcloud run services add-iam-policy-binding deepdive-quant \
           --region=us-central1 \
           --member="allUsers" \
-          --role="roles/run.invoker" || echo "IAM binding skipped (org policy may restrict allUsers)"
+          --role="roles/run.invoker" || echo "IAM binding skipped"
     waitFor: [deploy-quant]
+
+  # ── 9. Wire quant engine CORS to the real web URL (auto, no manual hash needed)
+  - id: update-quant-cors
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        WEB_URL=$(gcloud run services describe deepdive-web \
+          --region=us-central1 --format="value(status.url)" | tr -d '[:space:]')
+        echo "Setting FRONTEND_URL to $$WEB_URL"
+        gcloud run services update deepdive-quant \
+          --region=us-central1 \
+          --update-env-vars=FRONTEND_URL=$$WEB_URL
+    waitFor: [allow-unauthenticated-web, allow-unauthenticated-quant]
 
 timeout: 3600s
 
@@ -120,7 +134,3 @@ options:
   logging: CLOUD_LOGGING_ONLY
   diskSizeGb: 100
   substitutionOption: ALLOW_LOOSE
-
-# Substitution variables — set in Cloud Build trigger or --substitutions flag
-substitutions:
-  _WEB_SERVICE_HASH: ""   # fill after first deploy to set FRONTEND_URL on quant engine
