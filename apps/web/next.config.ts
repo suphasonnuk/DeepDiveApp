@@ -41,6 +41,7 @@ const nextConfig: NextConfig = {
       "encoding",
       "bufferutil",
       "utf-8-validate",
+      "@react-native-async-storage/async-storage",
     );
     return config;
   },
