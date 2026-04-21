@@ -123,7 +123,11 @@ gcloud builds submit --config=cloudbuild.yaml `
   _RPC_POLYGON="",`
   _WEB_SERVICE_HASH=""
 =======
+<<<<<<< HEAD
 $QUANT_URL = gcloud run services describe deepdive-quant --region=asia-southeast3  --format="value(status.url)"
+=======
+$QUANT_URL = gcloud run services describe deepdive-quant --region=asia-southeast3 --format="value(status.url)"
+>>>>>>> 3862628fefa580f03db0d9d055966c97f577886d
 echo $QUANT_URL
 >>>>>>> 0c5bbf458e700f052aa2f674bf32df50613029ae
 ```
@@ -134,7 +138,7 @@ If the Signals tab shows "quant engine unavailable" in the app, set the URL manu
 
 ```powershell
 gcloud run services update deepdive-web `
-  --region=us-central1 `
+  --region=asia-southeast3 `
   --set-env-vars="QUANT_ENGINE_URL=$QUANT_URL,BINANCE_LEVERAGE=3"
 ```
 
@@ -200,12 +204,12 @@ Run Step 6 manually to point the web app at the correct quant engine URL.
 
 **View live logs:**
 ```powershell
-gcloud run services logs tail deepdive-web --region=us-central1
-gcloud run services logs tail deepdive-quant --region=us-central1
+gcloud run services logs tail deepdive-web --region=asia-southeast3
+gcloud run services logs tail deepdive-quant --region=asia-southeast3
 ```
 
 **Update a secret after deploy:**
 ```powershell
 Set-Secret "SECRET_NAME" "new-value"
-gcloud run services update deepdive-web --region=us-central1 --update-secrets=SECRET_NAME=SECRET_NAME:latest
+gcloud run services update deepdive-web --region=asia-southeast3 --update-secrets=SECRET_NAME=SECRET_NAME:latest
 ```
