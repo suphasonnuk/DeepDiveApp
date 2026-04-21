@@ -24,7 +24,7 @@ steps:
       - deploy
       - deepdive-quant
       - --image=gcr.io/$PROJECT_ID/deepdive-quant:latest
-      - --region=asia-southeast1
+      - --region=asia-southeast3
       - --platform=managed
       - --no-allow-unauthenticated
       - --set-secrets=BINANCE_TESTNET_API_KEY=BINANCE_TESTNET_API_KEY:latest,BINANCE_TESTNET_SECRET=BINANCE_TESTNET_SECRET:latest
@@ -44,7 +44,7 @@ steps:
       - -c
       - |
         gcloud run services describe deepdive-quant \
-          --region=asia-southeast1 --format="value(status.url)" | tr -d '[:space:]' > /workspace/quant_url.txt
+          --region=asia-southeast3 --format="value(status.url)" | tr -d '[:space:]' > /workspace/quant_url.txt
         echo "Quant engine URL: $$(cat /workspace/quant_url.txt)"
     waitFor: [deploy-quant]
 
@@ -74,7 +74,7 @@ steps:
       - |
         gcloud run deploy deepdive-web \
           --image=gcr.io/$PROJECT_ID/deepdive-web:latest \
-          --region=asia-southeast1 \
+          --region=asia-southeast3 \
           --platform=managed \
           --no-allow-unauthenticated \
           --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,QUICKNODE_URL=QUICKNODE_URL:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest,BINANCE_TESTNET_API_KEY=BINANCE_TESTNET_API_KEY:latest,BINANCE_TESTNET_SECRET=BINANCE_TESTNET_SECRET:latest \
@@ -95,7 +95,7 @@ steps:
       - -c
       - |
         gcloud run services add-iam-policy-binding deepdive-web \
-          --region=asia-southeast1 \
+          --region=asia-southeast3 \
           --member="allUsers" \
           --role="roles/run.invoker" || echo "IAM binding skipped"
     waitFor: [deploy-web]
@@ -107,7 +107,7 @@ steps:
       - -c
       - |
         gcloud run services add-iam-policy-binding deepdive-quant \
-          --region=asia-southeast1 \
+          --region=asia-southeast3 \
           --member="allUsers" \
           --role="roles/run.invoker" || echo "IAM binding skipped"
     waitFor: [deploy-quant]
@@ -120,10 +120,10 @@ steps:
       - -c
       - |
         WEB_URL=$(gcloud run services describe deepdive-web \
-          --region=asia-southeast1 --format="value(status.url)" | tr -d '[:space:]')
+          --region=asia-southeast3 --format="value(status.url)" | tr -d '[:space:]')
         echo "Setting FRONTEND_URL to $$WEB_URL"
         gcloud run services update deepdive-quant \
-          --region=asia-southeast1 \
+          --region=asia-southeast3 \
           --update-env-vars=FRONTEND_URL=$$WEB_URL
     waitFor: [allow-unauthenticated-web, allow-unauthenticated-quant]
 
