@@ -24,13 +24,13 @@ function Set-Secret($Name, $Value) {
 Then run these — replace each value with yours:
 
 ```powershell
-Set-Secret "TURSO_DATABASE_URL"        "libsql://your-db.turso.io"
-Set-Secret "TURSO_AUTH_TOKEN"          "your-turso-token"
-Set-Secret "JWT_SECRET"                "your-64-char-random-string"
-Set-Secret "QUICKNODE_URL"             "https://your-endpoint.quiknode.pro/key/"
-Set-Secret "COVALENT_API_KEY"          "your-covalent-key"
-Set-Secret "BINANCE_TESTNET_API_KEY"   "your-binance-testnet-api-key"
-Set-Secret "BINANCE_TESTNET_SECRET"    "your-binance-testnet-secret"
+Set-Secret "TURSO_DATABASE_URL"        "libsql://deepdivetest-suphasonnuk.aws-ap-northeast-1.turso.io"
+Set-Secret "TURSO_AUTH_TOKEN"          "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzY3MDQxNDksImlkIjoiMDE5ZGFiZDEtYWQwMS03NGU2LWI4ZmUtYzZmMzBjZWI3ZGVkIiwicmlkIjoiZDQyODgwYTYtZWRkNS00ZTRjLWE0ZWMtZTVhZTBmNzQ2NWY2In0.n1e-S5UxjVCVB1stngfpZpoP4_5kl-TKR8kshXnZolU9wH4idn79esrAzVrztNZjaP0yIHHDVezxAyH_nObvAw"
+Set-Secret "JWT_SECRET"                "cca4de2d71d177450f6696484681738f4bab7564c5283fd2063cca403e4168f0"
+Set-Secret "QUICKNODE_URL"             "https://quaint-greatest-emerald.quiknode.pro/7b61a7f78e6631df623608cea49a4b0b3aebc294"
+Set-Secret "COVALENT_API_KEY"          "cqt_rQ6RFFmyh7wHJp4Qdc6MPYMHRWDv"
+Set-Secret "BINANCE_TESTNET_API_KEY"   "8WlSXO1AG0RgYEHx8yl2B6UAKIs83GvJpK94ATxHd4GMz8Jbk2nv5PMcQrgFrENe"
+Set-Secret "BINANCE_TESTNET_SECRET"    "YtSsYaSDYIJlbbYU19Gd3c8gZeCPUdQuAGOpG4IEN06vET1cRipaJiApFIe4yq4z"
 ```
 
 > **Binance Testnet keys:** Get them at https://testnet.binancefutures.com → log in with GitHub → API Management → Create
@@ -85,11 +85,11 @@ From the project root, run Cloud Build with your RPC URLs and WalletConnect ID:
 ```powershell
 gcloud builds submit --config=cloudbuild.yaml `
   --substitutions=`
-  _WALLETCONNECT_PROJECT_ID="your-walletconnect-project-id",`
-  _RPC_ETHEREUM="https://your-eth.quiknode.pro/key/",`
-  _RPC_ARBITRUM="https://your-arb.quiknode.pro/key/",`
-  _RPC_BASE="https://your-base.quiknode.pro/key/",`
-  _RPC_POLYGON="https://your-polygon.quiknode.pro/key/",`
+  _WALLETCONNECT_PROJECT_ID="",`
+  _RPC_ETHEREUM="",`
+  _RPC_ARBITRUM="",`
+  _RPC_BASE="",`
+  _RPC_POLYGON="",`
   _WEB_SERVICE_HASH=""
 ```
 
@@ -103,7 +103,7 @@ This builds and deploys both services in order: quant engine first, then the web
 After the first deploy completes, get the web app URL:
 
 ```powershell
-gcloud run services describe deepdive-web --region=us-central1 --format="value(status.url)"
+gcloud run services describe deepdive-web-sph --region=asia-southeast3  --format="value(status.url)"
 ```
 
 It looks like: `https://deepdive-web-abc123xyz-uc.a.run.app`
