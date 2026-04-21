@@ -77,7 +77,7 @@ steps:
           --image=gcr.io/$PROJECT_ID/deepdive-web:latest \
           --region=us-central1 \
           --platform=managed \
-          --allow-unauthenticated \
+          --no-allow-unauthenticated \
           --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,QUICKNODE_URL=QUICKNODE_URL:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest,BINANCE_TESTNET_API_KEY=BINANCE_TESTNET_API_KEY:latest,BINANCE_TESTNET_SECRET=BINANCE_TESTNET_SECRET:latest \
           --set-env-vars="QUANT_ENGINE_URL=$$(cat /workspace/quant_url.txt),BINANCE_LEVERAGE=3" \
           --memory=2Gi \
@@ -87,6 +87,31 @@ steps:
           --min-instances=0 \
           --port=8080
     waitFor: [push-web]
+
+  # ── 8. Set public access (separate from deploy to avoid IAM permission errors) ─
+  - id: allow-unauthenticated-web
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud run services add-iam-policy-binding deepdive-web \
+          --region=us-central1 \
+          --member="allUsers" \
+          --role="roles/run.invoker" || echo "IAM binding skipped (org policy may restrict allUsers)"
+    waitFor: [deploy-web]
+
+  - id: allow-unauthenticated-quant
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud run services add-iam-policy-binding deepdive-quant \
+          --region=us-central1 \
+          --member="allUsers" \
+          --role="roles/run.invoker" || echo "IAM binding skipped (org policy may restrict allUsers)"
+    waitFor: [deploy-quant]
 
 timeout: 3600s
 

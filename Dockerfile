@@ -51,24 +51,15 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && \
     adduser  --system --uid 1001 nextjs
 
-RUN npm install -g pnpm@10
+# Standalone output already contains all required node_modules and packages
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 
-# Copy workspace manifests needed for pnpm to resolve the monorepo at runtime
-COPY --from=builder --chown=nextjs:nodejs /app/package.json          ./
-COPY --from=builder --chown=nextjs:nodejs /app/pnpm-lock.yaml        ./
-COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml   ./
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules          ./node_modules
-
-# Workspace packages (db needs libsql at runtime)
-COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
-
-# Next.js app (built output + public)
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/package.json    ./apps/web/
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/next.config.ts  ./apps/web/
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next           ./apps/web/.next
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public          ./apps/web/public
+# Static assets and public dir must be copied separately (not included in standalone)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public        ./apps/web/public
 
 USER nextjs
 EXPOSE 8080
 
-CMD ["pnpm", "--filter", "@deepdive/web", "start", "--", "-p", "8080", "-H", "0.0.0.0"]
+# server.js is the standalone entry point — never use `next start` in standalone mode
+CMD ["node", "apps/web/server.js"]
