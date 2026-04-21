@@ -12,13 +12,14 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@deepdive/crypto",
     "@deepdive/chains",
+    "@deepdive/db",
   ],
   serverExternalPackages: [
-    "@deepdive/db",
     "@libsql/client",
     "@libsql/hrana-client",
     "@libsql/isomorphic-ws",
     "@libsql/linux-x64-gnu",
+    "@libsql/linux-x64-musl",
     "@libsql/win32-x64-msvc",
     "@libsql/darwin-x64",
     "@libsql/darwin-arm64",

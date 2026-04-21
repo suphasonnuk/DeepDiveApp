@@ -58,6 +58,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public        ./apps/web/public
 
+# Install native db packages explicitly — standalone tracer skips serverExternalPackages
+RUN npm install --no-save @libsql/client libsql drizzle-orm
+
 USER nextjs
 EXPOSE 8080
 
