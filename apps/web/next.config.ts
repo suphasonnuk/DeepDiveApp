@@ -27,14 +27,20 @@ const nextConfig: NextConfig = {
     "better-sqlite3",
   ],
   webpack: (config) => {
-    // Prevent webpack from trying to parse native .node binaries as JavaScript
     config.externals.push(
+      // Native libsql binaries
       "@libsql/win32-x64-msvc",
       "@libsql/linux-x64-gnu",
       "@libsql/darwin-arm64",
       "@libsql/darwin-x64",
       "@libsql/client",
       "libsql",
+      // Optional WalletConnect / WebSocket deps not present in Docker
+      "pino-pretty",
+      "lokijs",
+      "encoding",
+      "bufferutil",
+      "utf-8-validate",
     );
     return config;
   },
