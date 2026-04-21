@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@deepdive/chains": "workspace:*",
+    "@deepdive/crypto": "workspace:*",
     "@deepdive/db": "workspace:*",
     "@tanstack/react-query": "^5",
     "@wagmi/connectors": "^5",

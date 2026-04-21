@@ -13,12 +13,6 @@
       ],
       "@deepdive/db": [
         "../../packages/db/src"
-      ],
-      "@deepdive/stores": [
-        "../../packages/stores/src"
-      ],
-      "@deepdive/ui": [
-        "../../packages/ui/src"
       ]
     }
   },

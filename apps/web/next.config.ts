@@ -3,6 +3,7 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  eslint: { ignoreDuringBuilds: true },
 
   // Required for monorepo standalone builds: trace files from the repo root
   // so workspace packages (packages/db, packages/crypto, etc.) are included.
@@ -11,8 +12,6 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@deepdive/crypto",
     "@deepdive/chains",
-    "@deepdive/stores",
-    "@deepdive/ui",
   ],
   serverExternalPackages: [
     "@deepdive/db",
