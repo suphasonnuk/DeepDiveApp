@@ -46,10 +46,9 @@ steps:
     args:
       - -c
       - |
-        QUANT_URL=$(gcloud run services describe deepdive-quant \
-          --region=us-central1 --format="value(status.url)" | tr -d '[:space:]')
-        echo "Quant engine URL: $$QUANT_URL"
-        printf '%s' "$$QUANT_URL" > /workspace/quant_url.txt
+        gcloud run services describe deepdive-quant \
+          --region=us-central1 --format="value(status.url)" | tr -d '[:space:]' > /workspace/quant_url.txt
+        echo "Quant engine URL: $(cat /workspace/quant_url.txt)"
     waitFor: [deploy-quant]
 
   # ── 5. Build web app image ────────────────────────────────────────────────────
@@ -78,14 +77,13 @@ steps:
     args:
       - -c
       - |
-        QUANT_URL=$(cat /workspace/quant_url.txt)
         gcloud run deploy deepdive-web \
           --image=gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA \
           --region=us-central1 \
           --platform=managed \
           --allow-unauthenticated \
           --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,QUICKNODE_URL=QUICKNODE_URL:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest,BINANCE_TESTNET_API_KEY=BINANCE_TESTNET_API_KEY:latest,BINANCE_TESTNET_SECRET=BINANCE_TESTNET_SECRET:latest \
-          --set-env-vars="QUANT_ENGINE_URL=$$QUANT_URL,BINANCE_LEVERAGE=3" \
+          --set-env-vars="QUANT_ENGINE_URL=$(cat /workspace/quant_url.txt),BINANCE_LEVERAGE=3" \
           --memory=2Gi \
           --cpu=2 \
           --timeout=300 \
