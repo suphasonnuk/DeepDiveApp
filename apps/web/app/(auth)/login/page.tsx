@@ -42,14 +42,16 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight">DeepDive</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">DeepDive</h1>
           <p className="mt-2 text-sm text-text-secondary">
             Enter your passphrase to unlock
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <label htmlFor="passphrase" className="sr-only">Master passphrase</label>
           <input
+            id="passphrase"
             type="password"
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}

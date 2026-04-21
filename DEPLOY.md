@@ -1,13 +1,26 @@
 # Deploy to Google Cloud Run
 
-**Assumes:** GCP project created, billing enabled, `gcloud` installed and authenticated, all credentials ready.  
-**Time:** ~15 minutes.
+**Assumes:** GCP project created, billing enabled, `gcloud` installed, authenticated, and project set.  
+**Time:** ~15 minutes for a full build.
 
 ---
 
-## 1 — Push Secrets to GCP Secret Manager
+## Step 1 — Create Local DB Config (needed for Step 3)
 
-Open PowerShell. Paste this helper once:
+Create the file `packages\db\.env` (not `.env.example`) with your Turso credentials:
+
+```
+TURSO_DATABASE_URL=libsql://your-db.turso.io
+TURSO_AUTH_TOKEN=your-turso-token
+```
+
+This file is only used locally by the DB migration tool — it is never committed or deployed.
+
+---
+
+## Step 2 — Push Secrets to GCP Secret Manager
+
+Open PowerShell. Paste this helper once per session:
 
 ```powershell
 function Set-Secret($Name, $Value) {
@@ -21,9 +34,10 @@ function Set-Secret($Name, $Value) {
 }
 ```
 
-Then run these — replace each value with yours:
+Then run these with your real values:
 
 ```powershell
+<<<<<<< HEAD
 Set-Secret "TURSO_DATABASE_URL"        "libsql://deepdivetest-suphasonnuk.aws-ap-northeast-1.turso.io"
 Set-Secret "TURSO_AUTH_TOKEN"          "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzY3MDQxNDksImlkIjoiMDE5ZGFiZDEtYWQwMS03NGU2LWI4ZmUtYzZmMzBjZWI3ZGVkIiwicmlkIjoiZDQyODgwYTYtZWRkNS00ZTRjLWE0ZWMtZTVhZTBmNzQ2NWY2In0.n1e-S5UxjVCVB1stngfpZpoP4_5kl-TKR8kshXnZolU9wH4idn79esrAzVrztNZjaP0yIHHDVezxAyH_nObvAw"
 Set-Secret "JWT_SECRET"                "cca4de2d71d177450f6696484681738f4bab7564c5283fd2063cca403e4168f0"
@@ -31,13 +45,35 @@ Set-Secret "QUICKNODE_URL"             "https://quaint-greatest-emerald.quiknode
 Set-Secret "COVALENT_API_KEY"          "cqt_rQ6RFFmyh7wHJp4Qdc6MPYMHRWDv"
 Set-Secret "BINANCE_TESTNET_API_KEY"   "8WlSXO1AG0RgYEHx8yl2B6UAKIs83GvJpK94ATxHd4GMz8Jbk2nv5PMcQrgFrENe"
 Set-Secret "BINANCE_TESTNET_SECRET"    "YtSsYaSDYIJlbbYU19Gd3c8gZeCPUdQuAGOpG4IEN06vET1cRipaJiApFIe4yq4z"
+=======
+Set-Secret "TURSO_DATABASE_URL"       "libsql://your-db.turso.io"
+Set-Secret "TURSO_AUTH_TOKEN"         "your-turso-token"
+Set-Secret "JWT_SECRET"               "your-64-char-random-string"
+Set-Secret "BINANCE_TESTNET_API_KEY"  "your-binance-testnet-api-key"
+Set-Secret "BINANCE_TESTNET_SECRET"   "your-binance-testnet-secret"
+>>>>>>> 0c5bbf458e700f052aa2f674bf32df50613029ae
 ```
 
-> **Binance Testnet keys:** Get them at https://testnet.binancefutures.com → log in with GitHub → API Management → Create
+> **Binance Testnet keys:** https://testnet.binancefutures.com → log in with GitHub → API Management → Create API Key
 
 ---
 
-## 2 — Grant Cloud Build Permission to Access Secrets
+## Step 3 — Push Database Schema
+
+From the project root:
+
+```powershell
+pnpm --filter @deepdive/db db:push
+```
+
+Expected output: tables created (`quant_signals`, `paper_trades`, `auto_positions`, etc.).  
+If it says "No changes detected" — tables already exist, that's fine.
+
+---
+
+## Step 4 — Grant Cloud Build Permissions (first time only)
+
+Skip this step if you have deployed before.
 
 ```powershell
 $PROJECT_ID = gcloud config get-value project
@@ -52,37 +88,39 @@ gcloud projects add-iam-policy-binding $PROJECT_ID `
   --role=roles/run.admin
 
 gcloud projects add-iam-policy-binding $PROJECT_ID `
-  --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" `
-  --role=roles/secretmanager.secretAccessor
-
-gcloud projects add-iam-policy-binding $PROJECT_ID `
   --member="serviceAccount:$PROJECT_NUMBER@cloudbuild.gserviceaccount.com" `
   --role=roles/iam.serviceAccountUser
-```
 
-> If you've deployed before and permissions are already set, skip this step.
+gcloud projects add-iam-policy-binding $PROJECT_ID `
+  --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" `
+  --role=roles/secretmanager.secretAccessor
+```
 
 ---
 
-## 3 — Push Database Schema
+## Step 5 — Deploy Both Services
 
 From the project root:
 
 ```powershell
-pnpm --filter @deepdive/db db:push
+gcloud builds submit --config=cloudbuild.yaml --substitutions=_WEB_SERVICE_HASH=""
 ```
 
-This creates all tables in Turso including the latest `auto_positions` table. Run this every time the schema changes.
+This automatically:
+1. Builds and deploys the **quant engine** (Python FastAPI)
+2. Captures the quant engine's Cloud Run URL
+3. Builds and deploys the **web app** (Next.js) with `QUANT_ENGINE_URL` set to that URL
 
-> Requires `packages\db\.env` to exist with `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
+**Takes ~15 minutes.** Watch live at: https://console.cloud.google.com/cloud-build/builds
 
 ---
 
-## 4 — Deploy (First Time)
+## Step 6 — Verify the Quant Engine URL
 
-From the project root, run Cloud Build with your RPC URLs and WalletConnect ID:
+After the build completes, confirm the web app knows how to reach the quant engine:
 
 ```powershell
+<<<<<<< HEAD
 gcloud builds submit --config=cloudbuild.yaml `
   --substitutions=`
   _WALLETCONNECT_PROJECT_ID="",`
@@ -91,47 +129,33 @@ gcloud builds submit --config=cloudbuild.yaml `
   _RPC_BASE="",`
   _RPC_POLYGON="",`
   _WEB_SERVICE_HASH=""
+=======
+$QUANT_URL = gcloud run services describe deepdive-quant --region=us-central1 --format="value(status.url)"
+echo $QUANT_URL
+>>>>>>> 0c5bbf458e700f052aa2f674bf32df50613029ae
 ```
 
-This builds and deploys both services in order: quant engine first, then the web app.  
-**Takes ~15 minutes.** Watch progress at: https://console.cloud.google.com/cloud-build/builds
+You should see a URL like `https://deepdive-quant-xxxx-uc.a.run.app`.
+
+If the Signals tab shows "quant engine unavailable" in the app, set the URL manually (no rebuild needed):
+
+```powershell
+gcloud run services update deepdive-web `
+  --region=us-central1 `
+  --set-env-vars="QUANT_ENGINE_URL=$QUANT_URL,BINANCE_LEVERAGE=3"
+```
 
 ---
 
-## 5 — Wire Up the Quant Engine URL (Second Deploy)
-
-After the first deploy completes, get the web app URL:
+## Step 7 — Open the App
 
 ```powershell
 gcloud run services describe deepdive-web-sph --region=asia-southeast3  --format="value(status.url)"
 ```
 
-It looks like: `https://deepdive-web-abc123xyz-uc.a.run.app`
+Open that URL. Log in with any passphrase — this becomes your permanent session key, so remember it.
 
-Copy the hash part (`abc123xyz`) and redeploy with it:
-
-```powershell
-gcloud builds submit --config=cloudbuild.yaml `
-  --substitutions=`
-  _WALLETCONNECT_PROJECT_ID="your-walletconnect-project-id",`
-  _RPC_ETHEREUM="https://your-eth.quiknode.pro/key/",`
-  _RPC_ARBITRUM="https://your-arb.quiknode.pro/key/",`
-  _RPC_BASE="https://your-base.quiknode.pro/key/",`
-  _RPC_POLYGON="https://your-polygon.quiknode.pro/key/",`
-  _WEB_SERVICE_HASH="abc123xyz"
-```
-
-This sets `FRONTEND_URL` on the quant engine so server-to-server communication works correctly.
-
----
-
-## 6 — Open the App
-
-```powershell
-gcloud run services describe deepdive-web --region=us-central1 --format="value(status.url)"
-```
-
-Open that URL in your browser. Log in with any passphrase (this becomes your permanent session key — remember it).
+Then: **Signals tab → Quick Scan** to generate your first signals and open Binance positions.
 
 ---
 
@@ -139,24 +163,14 @@ Open that URL in your browser. Log in with any passphrase (this becomes your per
 
 ```powershell
 git push origin main
-
-gcloud builds submit --config=cloudbuild.yaml `
-  --substitutions=`
-  _WALLETCONNECT_PROJECT_ID="your-walletconnect-project-id",`
-  _RPC_ETHEREUM="https://your-eth.quiknode.pro/key/",`
-  _RPC_ARBITRUM="https://your-arb.quiknode.pro/key/",`
-  _RPC_BASE="https://your-base.quiknode.pro/key/",`
-  _RPC_POLYGON="https://your-polygon.quiknode.pro/key/",`
-  _WEB_SERVICE_HASH="abc123xyz"
+gcloud builds submit --config=cloudbuild.yaml --substitutions=_WEB_SERVICE_HASH=""
 ```
-
-> **Tip:** Save this command (with your actual values filled in) to a file called `deploy.ps1` so you don't have to retype it.
 
 ---
 
 ## Auto-Deploy on Every Git Push (Optional)
 
-Set up a Cloud Build trigger so every push to `main` deploys automatically:
+Run once to connect your GitHub repo to Cloud Build:
 
 ```powershell
 gcloud builds triggers create github `
@@ -164,51 +178,41 @@ gcloud builds triggers create github `
   --repo-owner="suphasonnuk" `
   --branch-pattern="^main$" `
   --build-config="cloudbuild.yaml" `
-  --substitutions=`
-  _WALLETCONNECT_PROJECT_ID="your-walletconnect-project-id",`
-  _RPC_ETHEREUM="https://your-eth.quiknode.pro/key/",`
-  _RPC_ARBITRUM="https://your-arb.quiknode.pro/key/",`
-  _RPC_BASE="https://your-base.quiknode.pro/key/",`
-  _RPC_POLYGON="https://your-polygon.quiknode.pro/key/",`
-  _WEB_SERVICE_HASH="abc123xyz"
+  --substitutions=_WEB_SERVICE_HASH=""
 ```
+
+After this, every `git push origin main` triggers a deploy automatically.
 
 ---
 
 ## Troubleshooting
 
-**Build failed — see what went wrong:**
+**See why a build failed:**
 ```powershell
-gcloud builds list --limit=3
+gcloud builds list --limit=5
 gcloud builds log THE_BUILD_ID
 ```
 
-**Secret not found error:**  
-The secret name in the error doesn't exist in Secret Manager. Run `Set-Secret` for that name (Step 1).
+**Secret not found during build:**  
+The secret wasn't created. Re-run `Set-Secret` for that name (Step 2).
 
 **Permission denied accessing secrets:**  
-Re-run Step 2.
+Re-run Step 4.
 
-**DB connection error:**  
-Check `packages\db\.env` has correct values, then re-run Step 3.
+**DB tables missing / connection error:**  
+Verify `packages\db\.env` has correct values, then re-run Step 3.
 
-**Signals tab empty after scan:**  
-Check the quant engine is running:
+**Signals tab empty — quant engine unreachable:**  
+Run Step 6 manually to point the web app at the correct quant engine URL.
+
+**View live logs:**
 ```powershell
-gcloud run services describe deepdive-quant --region=us-central1 --format="value(status.url)"
+gcloud run services logs tail deepdive-web --region=us-central1
 gcloud run services logs tail deepdive-quant --region=us-central1
 ```
 
-**View live app logs:**
+**Update a secret after deploy:**
 ```powershell
-gcloud run services logs tail deepdive-web --region=us-central1
-```
-
-**Update a secret value:**
-```powershell
-# Re-run Set-Secret (the helper handles both create and update)
 Set-Secret "SECRET_NAME" "new-value"
-
-# Then restart the service to pick it up
 gcloud run services update deepdive-web --region=us-central1 --update-secrets=SECRET_NAME=SECRET_NAME:latest
 ```

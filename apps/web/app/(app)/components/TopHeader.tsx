@@ -52,6 +52,8 @@ export function TopHeader() {
             <>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
+                aria-haspopup="true"
+                aria-expanded={showDropdown}
                 className="flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm transition-colors hover:border-accent/50"
               >
                 <span
@@ -80,7 +82,7 @@ export function TopHeader() {
 
               {/* Connected Dropdown */}
               {showDropdown && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-surface p-2 shadow-xl">
+                <div role="menu" className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-surface p-2 shadow-xl">
                   {/* Current chain */}
                   <div className="px-3 py-2 text-xs text-text-muted">
                     Connected to{" "}
@@ -97,6 +99,7 @@ export function TopHeader() {
                     {chains.map((c) => (
                       <button
                         key={c.id}
+                        role="menuitem"
                         onClick={() => {
                           switchChain({ chainId: c.id });
                           setShowDropdown(false);

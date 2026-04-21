@@ -46,10 +46,9 @@ steps:
     args:
       - -c
       - |
-        QUANT_URL=$(gcloud run services describe deepdive-quant \
-          --region=us-central1 --format="value(status.url)")
-        echo "Quant engine URL: $QUANT_URL"
-        echo $QUANT_URL > /workspace/quant_url.txt
+        gcloud run services describe deepdive-quant \
+          --region=us-central1 --format="value(status.url)" | tr -d '[:space:]' > /workspace/quant_url.txt
+        echo "Quant engine URL: $$(cat /workspace/quant_url.txt)"
     waitFor: [deploy-quant]
 
   # ── 5. Build web app image ────────────────────────────────────────────────────
@@ -57,11 +56,6 @@ steps:
     name: gcr.io/cloud-builders/docker
     args:
       - build
-      - --build-arg=NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=${_WALLETCONNECT_PROJECT_ID}
-      - --build-arg=NEXT_PUBLIC_RPC_ETHEREUM=${_RPC_ETHEREUM}
-      - --build-arg=NEXT_PUBLIC_RPC_ARBITRUM=${_RPC_ARBITRUM}
-      - --build-arg=NEXT_PUBLIC_RPC_BASE=${_RPC_BASE}
-      - --build-arg=NEXT_PUBLIC_RPC_POLYGON=${_RPC_POLYGON}
       - -t
       - gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA
       - -t
@@ -83,14 +77,13 @@ steps:
     args:
       - -c
       - |
-        QUANT_URL=$(cat /workspace/quant_url.txt)
         gcloud run deploy deepdive-web \
           --image=gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA \
           --region=us-central1 \
           --platform=managed \
           --allow-unauthenticated \
           --set-secrets=TURSO_DATABASE_URL=TURSO_DATABASE_URL:latest,TURSO_AUTH_TOKEN=TURSO_AUTH_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,QUICKNODE_URL=QUICKNODE_URL:latest,COVALENT_API_KEY=COVALENT_API_KEY:latest,BINANCE_TESTNET_API_KEY=BINANCE_TESTNET_API_KEY:latest,BINANCE_TESTNET_SECRET=BINANCE_TESTNET_SECRET:latest \
-          --set-env-vars="QUANT_ENGINE_URL=$QUANT_URL,BINANCE_LEVERAGE=3" \
+          --set-env-vars="QUANT_ENGINE_URL=$$(cat /workspace/quant_url.txt),BINANCE_LEVERAGE=3" \
           --memory=2Gi \
           --cpu=2 \
           --timeout=300 \
@@ -111,12 +104,8 @@ options:
   machineType: E2_HIGHCPU_8
   logging: CLOUD_LOGGING_ONLY
   diskSizeGb: 100
+  substitutionOption: ALLOW_LOOSE
 
-# Substitution variables — set these in your Cloud Build trigger
+# Substitution variables — set in Cloud Build trigger or --substitutions flag
 substitutions:
-  _WALLETCONNECT_PROJECT_ID: ""
-  _RPC_ETHEREUM: ""
-  _RPC_ARBITRUM: ""
-  _RPC_BASE: ""
-  _RPC_POLYGON: ""
   _WEB_SERVICE_HASH: ""   # fill after first deploy to set FRONTEND_URL on quant engine

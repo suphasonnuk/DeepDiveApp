@@ -24,11 +24,14 @@ interface QuantSignal {
   generatedAt: string;
 }
 
-interface PortfolioToken {
-  symbol: string;
-}
+interface PortfolioToken { symbol: string; }
 
-const QUICK_SCAN_TOKENS = [
+type Filter = "ALL" | "BUY" | "SELL" | "HOLD";
+type SortBy = "confidence" | "recency";
+type TradeStatus = "idle" | "opening" | "done" | "error";
+type BinStatus = "idle" | "opening" | "done" | "skipped" | "error";
+
+const QUICK_SCAN_TOKENS: PortfolioToken[] = [
   { symbol: "BTC" }, { symbol: "ETH" }, { symbol: "BNB" },
   { symbol: "SOL" }, { symbol: "XRP" }, { symbol: "ADA" },
   { symbol: "DOGE" }, { symbol: "AVAX" }, { symbol: "DOT" },
@@ -38,15 +41,15 @@ const QUICK_SCAN_TOKENS = [
   { symbol: "MKR" }, { symbol: "INJ" },
 ];
 
-const SIGNAL_STYLE: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  BUY:  { label: "BUY",  bg: "bg-success/15",  text: "text-success",  border: "border-success/30" },
-  SELL: { label: "SELL", bg: "bg-danger/15",   text: "text-danger",   border: "border-danger/30" },
-  HOLD: { label: "HOLD", bg: "bg-warning/10",  text: "text-warning",  border: "border-warning/20" },
-};
+const SIGNAL_STYLE = {
+  BUY:  { label: "BUY",  bg: "bg-success/15", text: "text-success", border: "border-success/30" },
+  SELL: { label: "SELL", bg: "bg-danger/15",  text: "text-danger",  border: "border-danger/30"  },
+  HOLD: { label: "HOLD", bg: "bg-warning/10", text: "text-warning", border: "border-warning/20" },
+} as const;
 
 const REGIME_COLOR: Record<string, string> = {
-  BULL:     "text-success",
-  BEAR:     "text-danger",
+  BULL: "text-success",
+  BEAR: "text-danger",
   SIDEWAYS: "text-warning",
 };
 
@@ -62,16 +65,308 @@ function pct(v: number | null, negate = false): string {
   return `${val > 0 ? "+" : ""}${val.toFixed(2)}%`;
 }
 
+function ConfidenceBar({ value }: { value: number }) {
+  const p = Math.round(value * 100);
+  const color = p >= 75 ? "bg-success" : p >= 50 ? "bg-accent" : p >= 35 ? "bg-warning" : "bg-danger";
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="h-1 flex-1 rounded-full bg-border"
+        role="progressbar"
+        aria-valuenow={p}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Signal confidence ${p}%`}
+      >
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${p}%` }} />
+      </div>
+      <span className="w-8 text-right text-xs tabular-nums text-text-secondary">{p}%</span>
+    </div>
+  );
+}
+
+function TradeButtons({
+  tradeStatus,
+  bStatus,
+  onPaper,
+  onBinance,
+}: {
+  tradeStatus: TradeStatus;
+  bStatus: BinStatus;
+  onPaper: () => void;
+  onBinance: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <button
+        disabled={bStatus === "opening" || bStatus === "done" || bStatus === "skipped"}
+        onClick={onBinance}
+        className={`w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+          bStatus === "error"   ? "bg-danger/10 text-danger hover:bg-danger/20"
+          : bStatus === "done"   ? "bg-success/10 text-success"
+          : bStatus === "skipped" ? "bg-surface text-text-muted"
+          : "bg-success/10 text-success hover:bg-success/20"
+        }`}
+      >
+        {bStatus === "opening" ? "Opening on Binance..."
+          : bStatus === "done"    ? "Binance Position Opened ✓"
+          : bStatus === "skipped" ? "Already Open on Binance"
+          : bStatus === "error"   ? "Binance Failed — tap to retry"
+          : "Open on Binance Testnet"}
+      </button>
+      <button
+        disabled={tradeStatus === "opening" || tradeStatus === "done"}
+        onClick={onPaper}
+        className={`w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+          tradeStatus === "error"
+            ? "bg-danger/10 text-danger hover:bg-danger/20"
+            : "bg-accent/10 text-accent hover:bg-accent/20"
+        }`}
+      >
+        {tradeStatus === "opening" ? "Opening..."
+          : tradeStatus === "done"  ? "Paper Trade Opened ✓"
+          : tradeStatus === "error" ? "Failed — tap to retry"
+          : "Open Paper Trade"}
+      </button>
+    </div>
+  );
+}
+
+function HeroCard({
+  signal,
+  tradeStatus,
+  bStatus,
+  onPaper,
+  onBinance,
+}: {
+  signal: QuantSignal;
+  tradeStatus: TradeStatus;
+  bStatus: BinStatus;
+  onPaper: () => void;
+  onBinance: () => void;
+}) {
+  const style = SIGNAL_STYLE[signal.signal as keyof typeof SIGNAL_STYLE] ?? SIGNAL_STYLE.HOLD;
+
+  return (
+    <div className="rounded-xl bg-surface-elevated p-5 space-y-4">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`rounded-lg px-3 py-1 text-sm font-bold tracking-wide ${style.bg} ${style.text}`}>
+              {style.label}
+            </span>
+            <span className={`text-xs font-medium ${REGIME_COLOR[signal.regime] ?? "text-text-muted"}`}>
+              {signal.regime}
+            </span>
+          </div>
+          <p className="font-display text-3xl font-bold tracking-tight">{signal.symbol}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="font-semibold">{fmt(signal.priceAtSignal)}</p>
+          {signal.kellyFraction != null && (
+            <p className="mt-0.5 text-xs text-text-muted">
+              Kelly {(signal.kellyFraction * 100).toFixed(1)}%
+            </p>
+          )}
+          {signal.riskRewardRatio != null && (
+            <p className="text-xs text-text-muted">R/R {signal.riskRewardRatio.toFixed(2)}×</p>
+          )}
+        </div>
+      </div>
+
+      <ConfidenceBar value={signal.confidence} />
+
+      {/* TP / SL */}
+      {(signal.targetPrice || signal.stopPrice) && (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-surface p-3">
+            <p className="text-xs text-text-muted">Take Profit</p>
+            <p className="font-semibold text-success">{fmt(signal.targetPrice)}</p>
+            <p className="text-xs text-success">{pct(signal.targetPct)}</p>
+          </div>
+          <div className="rounded-lg bg-surface p-3">
+            <p className="text-xs text-text-muted">Stop Loss</p>
+            <p className="font-semibold text-danger">{fmt(signal.stopPrice)}</p>
+            <p className="text-xs text-danger">{pct(signal.stopPct, true)}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Kalman rationale */}
+      {signal.kalmanReason && (
+        <p className="line-clamp-2 text-sm leading-relaxed text-text-secondary">
+          {signal.kalmanReason}
+        </p>
+      )}
+
+      {signal.signal !== "HOLD" && (
+        <TradeButtons
+
+          tradeStatus={tradeStatus}
+          bStatus={bStatus}
+          onPaper={onPaper}
+          onBinance={onBinance}
+        />
+      )}
+    </div>
+  );
+}
+
+function SignalCard({
+  signal,
+  isExpanded,
+  onToggle,
+  tradeStatus,
+  bStatus,
+  onPaper,
+  onBinance,
+}: {
+  signal: QuantSignal;
+  isExpanded: boolean;
+  onToggle: () => void;
+  tradeStatus: TradeStatus;
+  bStatus: BinStatus;
+  onPaper: () => void;
+  onBinance: () => void;
+}) {
+  const style = SIGNAL_STYLE[signal.signal as keyof typeof SIGNAL_STYLE] ?? SIGNAL_STYLE.HOLD;
+
+  return (
+    <div className={`rounded-xl border bg-surface ${style.border}`}>
+      {/* Always-visible: badge + symbol + regime + price */}
+      <div className="p-4 space-y-2.5">
+        <button
+          className="flex w-full items-center justify-between text-left"
+          aria-expanded={isExpanded}
+          aria-controls={`signal-detail-${signal.id}`}
+          onClick={onToggle}
+        >
+          <div className="flex items-center gap-2.5">
+            <span className={`rounded-md px-2.5 py-1 text-xs font-bold ${style.bg} ${style.text}`}>
+              {style.label}
+            </span>
+            <span className="font-semibold">{signal.symbol}</span>
+            <span className={`text-xs ${REGIME_COLOR[signal.regime] ?? "text-text-muted"}`}>
+              {signal.regime}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 ml-2">
+            <span className="text-sm font-medium">{fmt(signal.priceAtSignal)}</span>
+            <svg
+              width="12" height="12" viewBox="0 0 12 12" fill="none"
+              className={`text-text-muted transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            >
+              <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </button>
+
+        {/* Confidence — always visible */}
+        <ConfidenceBar value={signal.confidence} />
+
+        {/* TP / SL inline — always visible */}
+        {(signal.targetPrice || signal.stopPrice) && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            {signal.targetPrice != null && (
+              <span className="text-text-muted">
+                TP{" "}
+                <span className="font-medium text-success">{fmt(signal.targetPrice)}</span>
+                {signal.targetPct != null && (
+                  <span className="text-success"> {pct(signal.targetPct)}</span>
+                )}
+              </span>
+            )}
+            {signal.stopPrice != null && (
+              <span className="text-text-muted">
+                SL{" "}
+                <span className="font-medium text-danger">{fmt(signal.stopPrice)}</span>
+                {signal.stopPct != null && (
+                  <span className="text-danger"> {pct(signal.stopPct, true)}</span>
+                )}
+              </span>
+            )}
+            {signal.kellyFraction != null && (
+              <span className="ml-auto text-text-muted">
+                Kelly {(signal.kellyFraction * 100).toFixed(1)}%
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Expanded: full model stats + actions */}
+      {isExpanded && (
+        <div
+          id={`signal-detail-${signal.id}`}
+          className="border-t border-border px-4 pb-4 pt-3 space-y-3"
+        >
+          {signal.kalmanReason && (
+            <p className="text-sm leading-relaxed text-text-secondary">{signal.kalmanReason}</p>
+          )}
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+            {signal.riskRewardRatio != null && (
+              <div>
+                <p className="text-text-muted">Risk / Reward</p>
+                <p className="font-medium text-text-secondary">{signal.riskRewardRatio.toFixed(2)}×</p>
+              </div>
+            )}
+            {signal.ouZScore != null && (
+              <div>
+                <p className="text-text-muted">OU Z-Score</p>
+                <p className={`font-medium ${
+                  signal.ouZScore < -1.5 ? "text-success"
+                  : signal.ouZScore > 1.5 ? "text-danger"
+                  : "text-text-secondary"
+                }`}>
+                  {signal.ouZScore > 0 ? "+" : ""}{signal.ouZScore.toFixed(2)}σ
+                </p>
+              </div>
+            )}
+            {signal.ouHalfLifeDays != null && (
+              <div>
+                <p className="text-text-muted">Mean-Rev Half-Life</p>
+                <p className="font-medium text-text-secondary">{signal.ouHalfLifeDays.toFixed(0)} days</p>
+              </div>
+            )}
+            {signal.delta != null && (
+              <div>
+                <p className="text-text-muted">Net Delta</p>
+                <p className="font-medium text-text-secondary">
+                  {signal.delta === 0 ? "Neutral" : signal.delta > 0 ? `+${signal.delta}` : signal.delta}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {signal.signal !== "HOLD" && (
+            <TradeButtons
+    
+              tradeStatus={tradeStatus}
+              bStatus={bStatus}
+              onPaper={onPaper}
+              onBinance={onBinance}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SignalsPage() {
   const { address, chain } = useAccount();
   const [signals, setSignals] = useState<QuantSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
-  const [paperTradeStatus, setPaperTradeStatus] = useState<Record<number, "idle" | "opening" | "done" | "error">>({});
-  const [binanceStatus, setBinanceStatus] = useState<Record<number, "idle" | "opening" | "done" | "skipped" | "error">>({});
+  const [paperTradeStatus, setPaperTradeStatus] = useState<Record<number, TradeStatus>>({});
+  const [binanceStatus, setBinanceStatus] = useState<Record<number, BinStatus>>({});
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanInfo, setScanInfo] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("ALL");
+  const [sortBy, setSortBy] = useState<SortBy>("confidence");
 
   useEffect(() => {
     fetch("/api/signals?active=true&limit=30")
@@ -86,18 +381,18 @@ export default function SignalsPage() {
     setScanError(null);
     setScanInfo(null);
     try {
-      const sigRes = await fetch("/api/signals", {
+      const res = await fetch("/api/signals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tokens }),
       });
-      if (!sigRes.ok) throw new Error("Signal generation failed — is the quant engine running?");
-      const sigData = await sigRes.json();
-      const count = sigData.signals?.length ?? 0;
+      if (!res.ok) throw new Error("Signal generation failed — is the quant engine running?");
+      const data = await res.json();
+      const count = data.signals?.length ?? 0;
       setScanInfo(`${label}: ${count} signal${count !== 1 ? "s" : ""} generated`);
       setSignals((prev) => {
-        const newIds = new Set<number>((sigData.signals ?? []).map((s: QuantSignal) => s.id));
-        return [...(sigData.signals ?? []), ...prev.filter((s) => !newIds.has(s.id))];
+        const newIds = new Set<number>((data.signals ?? []).map((s: QuantSignal) => s.id));
+        return [...(data.signals ?? []), ...prev.filter((s) => !newIds.has(s.id))];
       });
     } catch (e) {
       setScanError((e as Error).message);
@@ -110,9 +405,9 @@ export default function SignalsPage() {
     if (!address || !chain) return;
     const STABLES = new Set(["USDC", "USDT", "DAI", "BUSD", "FRAX"]);
     try {
-      const portRes = await fetch(`/api/portfolio?address=${address}&chainId=${chain.id}`);
-      if (!portRes.ok) throw new Error("Portfolio fetch failed — check wallet connection");
-      const port = await portRes.json();
+      const res = await fetch(`/api/portfolio?address=${address}&chainId=${chain.id}`);
+      if (!res.ok) throw new Error("Portfolio fetch failed — check wallet connection");
+      const port = await res.json();
       const tokens: PortfolioToken[] = [port.nativeToken, ...(port.tokens ?? [])]
         .filter((t: PortfolioToken) => t?.symbol && !STABLES.has(t.symbol));
       if (!tokens.length) {
@@ -129,9 +424,14 @@ export default function SignalsPage() {
     await runScan(QUICK_SCAN_TOKENS, "Quick scan");
   }
 
+  function getKellyCap(): number {
+    return parseFloat(localStorage.getItem("deepdive_kelly_cap") ?? "0.25");
+  }
+
   async function openBinanceTrade(signal: QuantSignal) {
     if (signal.signal === "HOLD" || !signal.targetPrice || !signal.stopPrice) return;
     setBinanceStatus((s) => ({ ...s, [signal.id]: "opening" }));
+    const kellyFraction = Math.min(signal.kellyFraction ?? 0.05, getKellyCap());
     try {
       const res = await fetch("/api/positions", {
         method: "POST",
@@ -143,7 +443,7 @@ export default function SignalsPage() {
           currentPrice: signal.priceAtSignal,
           targetPrice: signal.targetPrice,
           stopPrice: signal.stopPrice,
-          kellyFraction: signal.kellyFraction ?? 0.05,
+          kellyFraction,
         }),
       });
       const data = await res.json();
@@ -156,6 +456,7 @@ export default function SignalsPage() {
 
   async function openPaperTrade(signal: QuantSignal) {
     setPaperTradeStatus((s) => ({ ...s, [signal.id]: "opening" }));
+    const positionSizeFraction = Math.min(signal.kellyFraction ?? 0.05, getKellyCap());
     try {
       const res = await fetch("/api/performance/trades", {
         method: "POST",
@@ -165,7 +466,7 @@ export default function SignalsPage() {
           symbol: signal.symbol,
           signal: signal.signal,
           entryPrice: signal.priceAtSignal,
-          positionSizeFraction: signal.kellyFraction ?? 0.05,
+          positionSizeFraction,
           targetPrice: signal.targetPrice ?? signal.priceAtSignal,
           stopPrice: signal.stopPrice ?? signal.priceAtSignal,
           confidence: signal.confidence,
@@ -179,13 +480,32 @@ export default function SignalsPage() {
     }
   }
 
-  const buySignals = signals.filter((s) => s.signal === "BUY");
-  const sellSignals = signals.filter((s) => s.signal === "SELL");
-  const holdSignals = signals.filter((s) => s.signal === "HOLD");
+  // Sorting
+  const sorted = [...signals].sort(
+    sortBy === "confidence"
+      ? (a, b) => b.confidence - a.confidence
+      : (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
+  );
+
+  // Filtering
+  const filtered = filter === "ALL" ? sorted : sorted.filter((s) => s.signal === filter);
+
+  // Counts for filter pills
+  const counts = {
+    ALL:  signals.length,
+    BUY:  signals.filter((s) => s.signal === "BUY").length,
+    SELL: signals.filter((s) => s.signal === "SELL").length,
+    HOLD: signals.filter((s) => s.signal === "HOLD").length,
+  };
+
+  // Hero: highest-confidence non-HOLD signal from filtered set
+  const heroSignal = filter === "HOLD" ? null : (filtered.find((s) => s.signal !== "HOLD") ?? null);
+  const listSignals = heroSignal ? filtered.filter((s) => s.id !== heroSignal.id) : filtered;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Control strip */}
+      <div className="flex items-center justify-between gap-2">
         <h1 className="font-display text-2xl font-bold tracking-tight">Signals</h1>
         <div className="flex gap-2">
           <button
@@ -193,7 +513,7 @@ export default function SignalsPage() {
             disabled={scanning}
             className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-surface disabled:opacity-40"
           >
-            {scanning ? "Scanning..." : "Quick Scan"}
+            {scanning ? "Scanning…" : "Quick Scan"}
           </button>
           <button
             onClick={scanPortfolio}
@@ -201,45 +521,63 @@ export default function SignalsPage() {
             title={!address ? "Connect wallet first" : undefined}
             className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
-            {scanning ? "Scanning..." : "Scan Portfolio"}
+            {scanning ? "Scanning…" : "Scan Portfolio"}
           </button>
         </div>
       </div>
 
       {!address && (
-        <p className="text-sm text-text-muted">Connect wallet to scan your portfolio, or use Quick Scan for popular tokens.</p>
-      )}
-
-      {scanError && (
-        <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
-          {scanError}
-        </p>
-      )}
-      {scanInfo && (
-        <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-secondary">
-          {scanInfo}
+        <p className="text-sm text-text-muted">
+          Connect wallet to scan your portfolio, or use Quick Scan for popular tokens.
         </p>
       )}
 
-      {/* Summary bar — inline counts, not card grid */}
+      {/* Status announcements */}
+      <div role="status" aria-live="polite" aria-atomic="true">
+        {scanError && (
+          <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+            {scanError}
+          </p>
+        )}
+        {scanInfo && (
+          <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-secondary">
+            {scanInfo}
+          </p>
+        )}
+      </div>
+
+      {/* Filter pills + sort toggle */}
       {signals.length > 0 && (
-        <div className="flex items-baseline gap-6 border-b border-border pb-4">
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-2xl font-bold text-success">{buySignals.length}</span>
-            <span className="text-xs uppercase tracking-widest text-text-muted">Buy</span>
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-2xl font-bold text-danger">{sellSignals.length}</span>
-            <span className="text-xs uppercase tracking-widest text-text-muted">Sell</span>
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-2xl font-bold text-warning">{holdSignals.length}</span>
-            <span className="text-xs uppercase tracking-widest text-text-muted">Hold</span>
-          </div>
-          <span className="ml-auto text-xs text-text-muted">{signals.length} signals</span>
+        <div className="flex items-center gap-1.5">
+          {(["ALL", "BUY", "SELL", "HOLD"] as const).map((f) => {
+            const isActive = filter === f;
+            const activeStyle =
+              f === "BUY"  ? "bg-success/20 text-success" :
+              f === "SELL" ? "bg-danger/20 text-danger"   :
+              f === "HOLD" ? "bg-warning/15 text-warning"  :
+                            "bg-surface-elevated text-text-primary";
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                  isActive ? activeStyle : "text-text-muted hover:text-text-secondary"
+                }`}
+              >
+                {f}{counts[f] > 0 ? ` (${counts[f]})` : ""}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setSortBy((s) => (s === "confidence" ? "recency" : "confidence"))}
+            className="ml-auto text-xs text-text-muted transition-colors hover:text-text-secondary"
+          >
+            ↕ {sortBy === "confidence" ? "Confidence" : "Recency"}
+          </button>
         </div>
       )}
 
+      {/* Loading skeletons */}
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -248,167 +586,79 @@ export default function SignalsPage() {
         </div>
       )}
 
+      {/* Empty state */}
       {!loading && signals.length === 0 && (
-        <div className="rounded-xl border border-border bg-surface p-8 text-center">
-          <p className="font-medium text-text-secondary">No signals yet</p>
-          <p className="mt-1 text-sm text-text-muted">
-            Connect your wallet and tap &quot;Scan Portfolio&quot; to generate quant signals.
-          </p>
+        <div className="rounded-xl border border-border bg-surface p-6 space-y-4">
+          <div>
+            <p className="font-medium text-text-secondary">No signals yet</p>
+            <p className="mt-1 text-sm text-text-muted">
+              Run a scan to generate quant signals from the Kalman, OU, and HMM models.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="rounded-lg bg-surface-elevated p-3">
+              <p className="text-sm font-medium">Quick Scan</p>
+              <p className="mt-0.5 text-xs text-text-muted">
+                Scans 20 major tokens — BTC, ETH, SOL, and more. No wallet needed.
+              </p>
+              <button
+                onClick={quickScan}
+                disabled={scanning}
+                className="mt-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+              >
+                {scanning ? "Scanning…" : "Quick Scan (20 tokens)"}
+              </button>
+            </div>
+            <div className="rounded-lg bg-surface-elevated p-3">
+              <p className="text-sm font-medium">Scan Portfolio</p>
+              <p className="mt-0.5 text-xs text-text-muted">
+                Scans tokens in your connected wallet. Skips stablecoins automatically.
+              </p>
+              <button
+                onClick={scanPortfolio}
+                disabled={scanning || !address}
+                className="mt-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium disabled:opacity-40"
+              >
+                {!address ? "Connect wallet first" : scanning ? "Scanning…" : "Scan Portfolio"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="space-y-3">
-        {signals.map((signal) => {
-          const style = SIGNAL_STYLE[signal.signal] ?? SIGNAL_STYLE.HOLD;
-          const isOpen = expanded === signal.id;
-          const conf = Math.round(signal.confidence * 100);
-          const tradeStatus = paperTradeStatus[signal.id] ?? "idle";
+      {/* Hero card — highest-confidence non-HOLD */}
+      {!loading && heroSignal && (
+        <HeroCard
+          signal={heroSignal}
+          tradeStatus={paperTradeStatus[heroSignal.id] ?? "idle"}
+          bStatus={binanceStatus[heroSignal.id] ?? "idle"}
+          onPaper={() => openPaperTrade(heroSignal)}
+          onBinance={() => openBinanceTrade(heroSignal)}
+        />
+      )}
 
-          return (
-            <div key={signal.id} className={`rounded-xl border bg-surface ${style.border}`}>
-              <button
-                className="flex w-full items-center justify-between p-4 text-left"
-                onClick={() => setExpanded(isOpen ? null : signal.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <span className={`rounded-lg px-2.5 py-1 text-sm font-bold ${style.bg} ${style.text}`}>
-                    {style.label}
-                  </span>
-                  <div>
-                    <p className="font-semibold">{signal.symbol}</p>
-                    <p className="text-xs text-text-muted">
-                      <span className={REGIME_COLOR[signal.regime] ?? "text-text-muted"}>
-                        {signal.regime}
-                      </span>
-                      {" · "}{conf}% conf
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">{fmt(signal.priceAtSignal)}</p>
-                  {signal.kellyFraction != null && (
-                    <p className="text-xs text-text-muted" title="Kelly Criterion: optimal position size as fraction of portfolio">
-                      Size {(signal.kellyFraction * 100).toFixed(1)}%
-                    </p>
-                  )}
-                </div>
-              </button>
-
-              {isOpen && (
-                <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
-                  {/* Kalman filter rationale — plain English first, abbreviations second */}
-                  {signal.kalmanReason && (
-                    <p className="text-sm leading-relaxed text-text-secondary">
-                      {signal.kalmanReason}
-                    </p>
-                  )}
-
-                  {/* Risk levels from Kelly + OU price targets */}
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="rounded-lg bg-surface-elevated p-3">
-                      <p className="text-xs text-text-muted">Take Profit</p>
-                      <p className="font-semibold text-success">{fmt(signal.targetPrice)}</p>
-                      <p className="text-xs text-success">{pct(signal.targetPct)}</p>
-                    </div>
-                    <div className="rounded-lg bg-surface-elevated p-3">
-                      <p className="text-xs text-text-muted">Stop Loss</p>
-                      <p className="font-semibold text-danger">{fmt(signal.stopPrice)}</p>
-                      <p className="text-xs text-danger">{pct(signal.stopPct, true)}</p>
-                    </div>
-                  </div>
-
-                  {/* Model evidence — full labels, units, threshold context */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
-                    {signal.riskRewardRatio != null && (
-                      <div>
-                        <p className="text-text-muted">Risk / Reward</p>
-                        <p className="font-medium text-text-secondary">{signal.riskRewardRatio.toFixed(2)}×</p>
-                      </div>
-                    )}
-                    {signal.ouZScore != null && (
-                      <div title="OU Z-Score: standard deviations from mean-reverting fair value. |z| > 1.5 triggers signal.">
-                        <p className="text-text-muted">OU Z-Score</p>
-                        <p className={`font-medium ${
-                          signal.ouZScore < -1.5 ? "text-success"
-                          : signal.ouZScore > 1.5 ? "text-danger"
-                          : "text-text-secondary"
-                        }`}>
-                          {signal.ouZScore > 0 ? "+" : ""}{signal.ouZScore.toFixed(2)}σ
-                        </p>
-                      </div>
-                    )}
-                    {signal.ouHalfLifeDays != null && (
-                      <div title="Mean-reversion half-life: expected days for price to close half the gap to fair value.">
-                        <p className="text-text-muted">Mean-Rev Half-Life</p>
-                        <p className="font-medium text-text-secondary">{signal.ouHalfLifeDays.toFixed(0)} days</p>
-                      </div>
-                    )}
-                    {signal.delta != null && (
-                      <div title="Net delta: directional exposure of this signal position.">
-                        <p className="text-text-muted">Net Delta</p>
-                        <p className="font-medium text-text-secondary">
-                          {signal.delta === 0 ? "Neutral" : signal.delta > 0 ? `+${signal.delta}` : signal.delta}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {signal.signal !== "HOLD" && (() => {
-                    const bStatus = binanceStatus[signal.id] ?? "idle";
-                    return (
-                      <div className="space-y-2">
-                        {/* Binance Futures Testnet — real position with TP/SL */}
-                        <button
-                          disabled={bStatus === "opening" || bStatus === "done" || bStatus === "skipped"}
-                          onClick={() => openBinanceTrade(signal)}
-                          className={`w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
-                            bStatus === "error"
-                              ? "bg-danger/10 text-danger hover:bg-danger/20"
-                              : bStatus === "done"
-                                ? "bg-success/10 text-success"
-                                : bStatus === "skipped"
-                                  ? "bg-surface-elevated text-text-muted"
-                                  : "bg-success/10 text-success hover:bg-success/20"
-                          }`}
-                        >
-                          {bStatus === "opening"
-                            ? "Opening on Binance..."
-                            : bStatus === "done"
-                              ? "Binance Position Opened ✓"
-                              : bStatus === "skipped"
-                                ? "Already Open on Binance"
-                                : bStatus === "error"
-                                  ? "Binance Failed — tap to retry"
-                                  : "Open on Binance Testnet"}
-                        </button>
-
-                        {/* Paper trade — local tracking only */}
-                        <button
-                          disabled={tradeStatus === "opening" || tradeStatus === "done"}
-                          onClick={() => openPaperTrade(signal)}
-                          className={`w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
-                            tradeStatus === "error"
-                              ? "bg-danger/10 text-danger hover:bg-danger/20"
-                              : "bg-accent/10 text-accent hover:bg-accent/20"
-                          }`}
-                        >
-                          {tradeStatus === "opening"
-                            ? "Opening..."
-                            : tradeStatus === "done"
-                              ? "Paper Trade Opened ✓"
-                              : tradeStatus === "error"
-                                ? "Failed — tap to retry"
-                                : "Open Paper Trade"}
-                        </button>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {/* Remaining signal list */}
+      {!loading && listSignals.length > 0 && (
+        <div className="space-y-2">
+          {heroSignal && (
+            <p className="px-0.5 text-xs text-text-muted">
+              {filter === "ALL" ? "All other signals" : `Other ${filter} signals`}
+            </p>
+          )}
+          {listSignals.map((signal) => (
+            <SignalCard
+              key={signal.id}
+              signal={signal}
+              isExpanded={expanded === signal.id}
+              onToggle={() => setExpanded(expanded === signal.id ? null : signal.id)}
+              tradeStatus={paperTradeStatus[signal.id] ?? "idle"}
+              bStatus={binanceStatus[signal.id] ?? "idle"}
+              onPaper={() => openPaperTrade(signal)}
+              onBinance={() => openBinanceTrade(signal)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,64 +1,41 @@
 import { WalletConnector } from "./components/WalletConnector";
+import { QuantSettings } from "./components/QuantSettings";
+
+const SECURITY_ITEMS = [
+  { label: "Session",    value: "Passphrase JWT · 1 hour expiry" },
+  { label: "Encryption", value: "AES-256-GCM · PBKDF2 600k iterations · IndexedDB" },
+  { label: "Privacy",    value: "Portfolio data never sent to server" },
+] as const;
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <h1 className="font-display text-2xl font-bold tracking-tight">Settings</h1>
 
-      {/* Wallet Connection */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-medium text-text-secondary">Wallet</h2>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <WalletConnector />
-        </div>
-      </div>
+      {/* Wallet */}
+      <section className="space-y-4">
+        <h2 className="text-xs uppercase tracking-widest text-text-muted">Wallet</h2>
+        <WalletConnector />
+      </section>
 
-      {/* Quant Engine Config */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-medium text-text-secondary">Quant Engine</h2>
-        {[
-          {
-            title: "Signal Models",
-            desc: "Kalman Filter · Ornstein-Uhlenbeck · HMM · Kelly Criterion",
-          },
-          {
-            title: "Price Data",
-            desc: "Binance public API · CoinGecko free tier",
-          },
-          {
-            title: "Paper Trading",
-            desc: "All trades are simulated — no real execution",
-          },
-        ].map((item) => (
-          <div
-            key={item.title}
-            className="rounded-xl border border-border bg-surface p-4"
-          >
-            <p className="font-medium">{item.title}</p>
-            <p className="mt-0.5 text-sm text-text-secondary">{item.desc}</p>
-          </div>
-        ))}
-      </div>
+      {/* Signal engine */}
+      <section className="space-y-4">
+        <h2 className="text-xs uppercase tracking-widest text-text-muted">Signal Engine</h2>
+        <QuantSettings />
+      </section>
 
-      {/* Security & Data */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-medium text-text-secondary">Security & Data</h2>
-        {[
-          { title: "Session", desc: "Passphrase-based JWT · 1 hour expiry" },
-          { title: "Encryption", desc: "AES-256-GCM · PBKDF2 600k iterations · IndexedDB" },
-          { title: "Privacy", desc: "Portfolio data never sent to server" },
-        ].map((item) => (
-          <div
-            key={item.title}
-            className="flex items-center justify-between rounded-xl border border-border bg-surface p-4"
-          >
-            <div>
-              <p className="font-medium">{item.title}</p>
-              <p className="mt-0.5 text-sm text-text-secondary">{item.desc}</p>
+      {/* Security — flat list, no cards */}
+      <section className="space-y-4">
+        <h2 className="text-xs uppercase tracking-widest text-text-muted">Security & Privacy</h2>
+        <div className="space-y-3">
+          {SECURITY_ITEMS.map(({ label, value }) => (
+            <div key={label} className="flex items-baseline justify-between gap-6">
+              <p className="shrink-0 text-sm text-text-muted">{label}</p>
+              <p className="text-right text-sm text-text-secondary">{value}</p>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

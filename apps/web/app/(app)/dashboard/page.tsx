@@ -42,10 +42,11 @@ function fmt(value: number | null | undefined, digits = 2): string {
 }
 
 function fmtBalance(value: number): string {
-  if (value < 0.0001) return "<0.0001";
+  if (value < 0.001) return "< 0.001";
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(2)}K`;
-  return value.toPrecision(4);
+  if (value >= 1) return value.toFixed(4);
+  return value.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 export default function DashboardPage() {
@@ -78,7 +79,8 @@ export default function DashboardPage() {
     : [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
+      {/* Page heading + refresh */}
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold tracking-tight">Portfolio</h1>
         {isConnected && (
@@ -87,7 +89,7 @@ export default function DashboardPage() {
             disabled={loading}
             className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-accent/40 disabled:opacity-40"
           >
-            {loading ? "Refreshing..." : "Refresh"}
+            {loading ? "Refreshing…" : "Refresh"}
           </button>
         )}
       </div>
@@ -102,20 +104,20 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Total value card */}
+      {/* Total value — raw number, no card wrapper */}
       {isConnected && (
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <p className="text-sm text-text-secondary">Total Portfolio Value</p>
+        <div>
+          <p className="text-xs uppercase tracking-widest text-text-muted">Total Portfolio Value</p>
           {loading && !portfolio ? (
-            <div className="mt-2 h-8 w-40 animate-pulse rounded bg-surface-elevated" />
+            <div className="mt-2 h-12 w-48 animate-pulse rounded bg-surface-elevated" />
           ) : (
-            <p className="font-display mt-1 text-5xl font-bold tracking-tight">
+            <p className="font-display mt-2 text-5xl font-bold tracking-tight">
               {portfolio ? fmt(portfolio.totalValueUsd) : "--"}
             </p>
           )}
           {portfolio && (
-            <p className="mt-1 text-xs text-text-muted">
-              {portfolio.chain} · {portfolio.address.slice(0, 6)}...{portfolio.address.slice(-4)}
+            <p className="mt-1.5 text-xs text-text-muted">
+              {portfolio.chain} · {portfolio.address.slice(0, 6)}…{portfolio.address.slice(-4)}
               {portfolio.note && (
                 <span className="ml-2 text-warning">{portfolio.note}</span>
               )}
@@ -127,58 +129,70 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Token holdings */}
+      {/* Token holdings — one container, divider rows */}
       {isConnected && allTokens.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-medium text-text-secondary">Holdings</h2>
-          {allTokens.map((token) => (
-            <div
-              key={token.address}
-              className="flex items-center justify-between rounded-xl border border-border bg-surface p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated text-sm font-bold">
-                  {token.symbol?.slice(0, 2)}
+        <div>
+          <p className="mb-3 text-xs uppercase tracking-widest text-text-muted">Holdings</p>
+          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            {allTokens.map((token, i) => (
+              <div
+                key={token.address}
+                className={`flex items-center justify-between px-4 py-3.5 ${
+                  i > 0 ? "border-t border-border" : ""
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-elevated text-sm font-bold">
+                    {token.logoUrl
+                      ? <img src={token.logoUrl} alt={token.symbol} className="h-full w-full object-cover" />
+                      : token.symbol?.slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="font-medium">{token.symbol}</p>
+                    <p className="text-xs text-text-muted">
+                      {fmtBalance(token.balance)} {token.symbol}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">{token.symbol}</p>
-                  <p className="text-xs text-text-muted">{fmtBalance(token.balance)} {token.symbol}</p>
+                <div className="text-right">
+                  <p className="font-semibold">{fmt(token.valueUsd)}</p>
+                  {token.priceUsd != null && (
+                    <p className="text-xs text-text-muted">{fmt(token.priceUsd, 4)}</p>
+                  )}
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-semibold">{fmt(token.valueUsd)}</p>
-                {token.priceUsd != null && (
-                  <p className="text-xs text-text-muted">{fmt(token.priceUsd, 4)}</p>
-                )}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
-      {/* LP Positions */}
+      {/* LP positions — same list treatment */}
       {isConnected && portfolio && portfolio.lpPositions.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-medium text-text-secondary">LP Positions</h2>
-          {portfolio.lpPositions.map((lp) => (
-            <div
-              key={lp.address}
-              className="flex items-center justify-between rounded-xl border border-border bg-surface p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-xs font-bold text-accent">
-                  LP
+        <div>
+          <p className="mb-3 text-xs uppercase tracking-widest text-text-muted">LP Positions</p>
+          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            {portfolio.lpPositions.map((lp, i) => (
+              <div
+                key={lp.address}
+                className={`flex items-center justify-between px-4 py-3.5 ${
+                  i > 0 ? "border-t border-border" : ""
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-bold text-accent">
+                    LP
+                  </div>
+                  <div>
+                    <p className="font-medium">{lp.symbol || "LP Token"}</p>
+                    <p className="text-xs text-text-muted">{fmtBalance(lp.balance)} shares</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">{lp.symbol || "LP Token"}</p>
-                  <p className="text-xs text-text-muted">{fmtBalance(lp.balance)} shares</p>
+                <div className="text-right">
+                  <p className="font-semibold">{fmt(lp.valueUsd)}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-semibold">{fmt(lp.valueUsd)}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
@@ -186,10 +200,11 @@ export default function DashboardPage() {
       {isConnected && !loading && portfolio && allTokens.length === 0 && (
         <div className="rounded-xl border border-border bg-surface p-6 text-center">
           <p className="text-text-muted">No token balances found on this chain.</p>
-          <p className="mt-1 text-xs text-text-muted">Switch networks or check your connection.</p>
+          <p className="mt-1 text-xs text-text-muted">
+            Switch networks or check your connection.
+          </p>
         </div>
       )}
-
     </div>
   );
 }
