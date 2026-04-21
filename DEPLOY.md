@@ -37,7 +37,6 @@ function Set-Secret($Name, $Value) {
 Then run these with your real values:
 
 ```powershell
-<<<<<<< HEAD
 Set-Secret "TURSO_DATABASE_URL"        "libsql://deepdivetest-suphasonnuk.aws-ap-northeast-1.turso.io"
 Set-Secret "TURSO_AUTH_TOKEN"          "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzY3MDQxNDksImlkIjoiMDE5ZGFiZDEtYWQwMS03NGU2LWI4ZmUtYzZmMzBjZWI3ZGVkIiwicmlkIjoiZDQyODgwYTYtZWRkNS00ZTRjLWE0ZWMtZTVhZTBmNzQ2NWY2In0.n1e-S5UxjVCVB1stngfpZpoP4_5kl-TKR8kshXnZolU9wH4idn79esrAzVrztNZjaP0yIHHDVezxAyH_nObvAw"
 Set-Secret "JWT_SECRET"                "cca4de2d71d177450f6696484681738f4bab7564c5283fd2063cca403e4168f0"
@@ -45,13 +44,7 @@ Set-Secret "QUICKNODE_URL"             "https://quaint-greatest-emerald.quiknode
 Set-Secret "COVALENT_API_KEY"          "cqt_rQ6RFFmyh7wHJp4Qdc6MPYMHRWDv"
 Set-Secret "BINANCE_TESTNET_API_KEY"   "8WlSXO1AG0RgYEHx8yl2B6UAKIs83GvJpK94ATxHd4GMz8Jbk2nv5PMcQrgFrENe"
 Set-Secret "BINANCE_TESTNET_SECRET"    "YtSsYaSDYIJlbbYU19Gd3c8gZeCPUdQuAGOpG4IEN06vET1cRipaJiApFIe4yq4z"
-=======
-Set-Secret "TURSO_DATABASE_URL"       "libsql://your-db.turso.io"
-Set-Secret "TURSO_AUTH_TOKEN"         "your-turso-token"
-Set-Secret "JWT_SECRET"               "your-64-char-random-string"
-Set-Secret "BINANCE_TESTNET_API_KEY"  "your-binance-testnet-api-key"
-Set-Secret "BINANCE_TESTNET_SECRET"   "your-binance-testnet-secret"
->>>>>>> 0c5bbf458e700f052aa2f674bf32df50613029ae
+
 ```
 
 > **Binance Testnet keys:** https://testnet.binancefutures.com → log in with GitHub → API Management → Create API Key
@@ -130,7 +123,7 @@ gcloud builds submit --config=cloudbuild.yaml `
   _RPC_POLYGON="",`
   _WEB_SERVICE_HASH=""
 =======
-$QUANT_URL = gcloud run services describe deepdive-quant --region=us-central1 --format="value(status.url)"
+$QUANT_URL = gcloud run services describe deepdive-quant --region=asia-southeast3  --format="value(status.url)"
 echo $QUANT_URL
 >>>>>>> 0c5bbf458e700f052aa2f674bf32df50613029ae
 ```
