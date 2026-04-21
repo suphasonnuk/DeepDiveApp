@@ -61,6 +61,7 @@ export function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
+              aria-current={isActive ? "page" : undefined}
               className={`flex flex-col items-center gap-1 px-3 py-2 transition-colors ${
                 isActive
                   ? "text-accent"

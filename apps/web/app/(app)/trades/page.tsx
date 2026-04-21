@@ -161,6 +161,17 @@ export default function PerformancePage() {
         const totalReturn = ((curve[curve.length - 1] - 1) * 100).toFixed(2);
         const peak = ((max - 1) * 100).toFixed(2);
         const isUp = curve[curve.length - 1] >= 1;
+        const W = 400;
+        const H = 96;
+        const pad = 4;
+        const points = curve
+          .map((v, i) => {
+            const x = pad + (i / (curve.length - 1)) * (W - pad * 2);
+            const y = H - pad - ((v - min) / range) * (H - pad * 2);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+          })
+          .join(" ");
+        const baselineY = (H - pad - ((1 - min) / range) * (H - pad * 2)).toFixed(1);
         return (
           <div className="rounded-xl border border-border bg-surface p-4">
             <div className="mb-3 flex items-baseline justify-between">
@@ -169,21 +180,35 @@ export default function PerformancePage() {
                 {Number(totalReturn) > 0 ? "+" : ""}{totalReturn}%
               </p>
             </div>
-            <div className="flex h-28 items-end gap-px">
-              {curve.map((v, i) => {
-                const h = Math.round(((v - min) / range) * 100);
-                const isPositive = v >= 1;
-                return (
-                  <div
-                    key={i}
-                    style={{ height: `${Math.max(h, 2)}%`, flex: 1 }}
-                    className={`rounded-sm ${isPositive ? "bg-success/60" : "bg-danger/60"}`}
-                  />
-                );
-              })}
-            </div>
+            <svg
+              viewBox={`0 0 ${W} ${H}`}
+              className="w-full"
+              aria-label={`Equity curve: ${totalReturn}% total return over ${curve.length} trades`}
+              role="img"
+            >
+              {/* Baseline at 1.0× */}
+              <line
+                x1={pad} y1={baselineY} x2={W - pad} y2={baselineY}
+                stroke="currentColor" strokeWidth="0.5" className="text-border" strokeDasharray="3 3"
+              />
+              {/* Area fill */}
+              <polyline
+                points={`${pad},${H - pad} ${points} ${W - pad},${H - pad}`}
+                fill={isUp ? "oklch(0.65 0.17 145 / 0.15)" : "oklch(0.60 0.20 25 / 0.15)"}
+                stroke="none"
+              />
+              {/* Line */}
+              <polyline
+                points={points}
+                fill="none"
+                stroke={isUp ? "var(--color-success)" : "var(--color-danger)"}
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            </svg>
             <div className="mt-2 flex justify-between text-xs text-text-muted">
-              <span>Baseline (1.0×)</span>
+              <span>Baseline 1.0×</span>
               <span>Peak +{peak}%</span>
               <span>{curve.length} trades</span>
             </div>
@@ -191,45 +216,58 @@ export default function PerformancePage() {
         );
       })()}
 
-      {/* Metrics grid */}
+      {/* Primary metrics — Win Rate + Sharpe as raw numbers */}
       {loading && !metrics ? (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-surface" />
-          ))}
+        <div className="flex gap-8">
+          <div className="h-14 w-28 animate-pulse rounded bg-surface-elevated" />
+          <div className="h-14 w-28 animate-pulse rounded bg-surface-elevated" />
         </div>
       ) : metrics ? (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <MetricCard
-            label="Win Rate"
-            value={metrics.totalTrades ? `${metrics.winRate.toFixed(1)}%` : "--"}
-            sub={`${metrics.totalTrades} closed trades`}
-          />
-          <MetricCard
-            label="Sharpe Ratio"
-            value={metrics.totalTrades ? metrics.sharpeRatio.toFixed(2) : "--"}
-            sub="annualised"
-          />
-          <MetricCard
-            label="Max Drawdown"
-            value={metrics.totalTrades ? `${metrics.maxDrawdownPct.toFixed(2)}%` : "--"}
-          />
-          <MetricCard
-            label="Avg P&L"
-            value={metrics.totalTrades ? `${metrics.avgPnlPct > 0 ? "+" : ""}${metrics.avgPnlPct.toFixed(2)}%` : "--"}
-            sub="per trade"
-          />
-          <MetricCard
-            label="Profit Factor"
-            value={metrics.totalTrades && metrics.profitFactor !== Infinity
-              ? metrics.profitFactor.toFixed(2)
-              : metrics.totalTrades ? "∞" : "--"}
-          />
-          <MetricCard
-            label="Open Trades"
-            value={String(metrics.openTrades)}
-          />
-        </div>
+        <>
+          <div className="flex gap-8 border-b border-border pb-6">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-text-muted">Win Rate</p>
+              <p className="font-display mt-1 text-4xl font-bold tabular-nums">
+                {metrics.totalTrades ? `${metrics.winRate.toFixed(1)}%` : "--"}
+              </p>
+              <p className="mt-1 text-xs text-text-muted">
+                {metrics.totalTrades} closed trades
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-widest text-text-muted">Sharpe</p>
+              <p className="font-display mt-1 text-4xl font-bold tabular-nums">
+                {metrics.totalTrades ? metrics.sharpeRatio.toFixed(2) : "--"}
+              </p>
+              <p className="mt-1 text-xs text-text-muted">annualised</p>
+            </div>
+          </div>
+
+          {/* Supporting metrics — compact 2×2 grid */}
+          <div className="grid grid-cols-2 gap-2">
+            <MetricCard
+              label="Max Drawdown"
+              value={metrics.totalTrades ? `${metrics.maxDrawdownPct.toFixed(2)}%` : "--"}
+            />
+            <MetricCard
+              label="Avg P&L"
+              value={metrics.totalTrades
+                ? `${metrics.avgPnlPct > 0 ? "+" : ""}${metrics.avgPnlPct.toFixed(2)}%`
+                : "--"}
+              sub="per trade"
+            />
+            <MetricCard
+              label="Profit Factor"
+              value={metrics.totalTrades && metrics.profitFactor !== Infinity
+                ? metrics.profitFactor.toFixed(2)
+                : metrics.totalTrades ? "∞" : "--"}
+            />
+            <MetricCard
+              label="Open Trades"
+              value={String(metrics.openTrades)}
+            />
+          </div>
+        </>
       ) : null}
 
       {/* Tabs */}
@@ -451,7 +489,7 @@ export default function PerformancePage() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => setClosingId(trade.id)}
+                      onClick={() => { setClosingId(trade.id); setCloseError(null); }}
                       className="text-xs text-accent hover:underline"
                     >
                       Close trade
