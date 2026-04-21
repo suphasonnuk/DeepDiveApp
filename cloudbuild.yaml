@@ -14,7 +14,7 @@ steps:
   # ── 2. Push quant engine image ────────────────────────────────────────────────
   - id: push-quant
     name: gcr.io/cloud-builders/docker
-    args: [push, gcr.io/$PROJECT_ID/deepdive-quant:$COMMIT_SHA]
+    args: [push, --all-tags, gcr.io/$PROJECT_ID/deepdive-quant]
     waitFor: [build-quant]
 
   # ── 3. Deploy quant engine to Cloud Run ──────────────────────────────────────
@@ -67,7 +67,7 @@ steps:
   # ── 6. Push web image ─────────────────────────────────────────────────────────
   - id: push-web
     name: gcr.io/cloud-builders/docker
-    args: [push, gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA]
+    args: [push, --all-tags, gcr.io/$PROJECT_ID/deepdive-web]
     waitFor: [build-web]
 
   # ── 7. Deploy web app to Cloud Run ───────────────────────────────────────────
@@ -91,12 +91,6 @@ steps:
           --min-instances=0 \
           --port=8080
     waitFor: [push-web]
-
-images:
-  - gcr.io/$PROJECT_ID/deepdive-web:$COMMIT_SHA
-  - gcr.io/$PROJECT_ID/deepdive-web:latest
-  - gcr.io/$PROJECT_ID/deepdive-quant:$COMMIT_SHA
-  - gcr.io/$PROJECT_ID/deepdive-quant:latest
 
 timeout: 3600s
 
