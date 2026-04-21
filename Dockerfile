@@ -12,7 +12,7 @@ COPY packages/crypto/package.json   ./packages/crypto/
 COPY packages/chains/package.json   ./packages/chains/
 COPY apps/web/package.json          ./apps/web/
 
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --no-frozen-lockfile --ignore-scripts
 
 # ── Stage 2: Build ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
