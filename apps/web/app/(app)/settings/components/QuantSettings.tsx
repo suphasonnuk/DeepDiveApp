@@ -63,6 +63,7 @@ export function QuantSettings() {
           aria-valuenow={Math.round(kellyCap * 100)}
           aria-valuemin={5}
           aria-valuemax={25}
+          aria-valuetext={pctLabel}
         />
         <div className="mt-1 flex justify-between text-xs text-text-muted">
           <span>5% — conservative</span>

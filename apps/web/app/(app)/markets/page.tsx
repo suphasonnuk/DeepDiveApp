@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import { useAccount } from "wagmi";
 
 interface QuantSignal {
@@ -31,14 +31,15 @@ type SortBy = "confidence" | "recency";
 type TradeStatus = "idle" | "opening" | "done" | "error";
 type BinStatus = "idle" | "opening" | "done" | "skipped" | "error";
 
+// CoinMarketCap top 20 non-stablecoin tokens (April 2026)
 const QUICK_SCAN_TOKENS: PortfolioToken[] = [
-  { symbol: "BTC" }, { symbol: "ETH" }, { symbol: "BNB" },
-  { symbol: "SOL" }, { symbol: "XRP" }, { symbol: "ADA" },
-  { symbol: "DOGE" }, { symbol: "AVAX" }, { symbol: "DOT" },
-  { symbol: "MATIC" }, { symbol: "LINK" }, { symbol: "UNI" },
-  { symbol: "LTC" }, { symbol: "ATOM" }, { symbol: "NEAR" },
-  { symbol: "ARB" }, { symbol: "OP" }, { symbol: "AAVE" },
-  { symbol: "MKR" }, { symbol: "INJ" },
+  { symbol: "BTC" },  { symbol: "ETH" },  { symbol: "BNB" },
+  { symbol: "SOL" },  { symbol: "XRP" },  { symbol: "DOGE" },
+  { symbol: "TON" },  { symbol: "ADA" },  { symbol: "TRX" },
+  { symbol: "AVAX" }, { symbol: "SHIB" }, { symbol: "LINK" },
+  { symbol: "BCH" },  { symbol: "DOT" },  { symbol: "SUI" },
+  { symbol: "LTC" },  { symbol: "NEAR" }, { symbol: "UNI" },
+  { symbol: "HBAR" }, { symbol: "APT" },
 ];
 
 const SIGNAL_STYLE = {
@@ -65,7 +66,7 @@ function pct(v: number | null, negate = false): string {
   return `${val > 0 ? "+" : ""}${val.toFixed(2)}%`;
 }
 
-function ConfidenceBar({ value }: { value: number }) {
+const ConfidenceBar = memo(function ConfidenceBar({ value }: { value: number }) {
   const p = Math.round(value * 100);
   const color = p >= 75 ? "bg-success" : p >= 50 ? "bg-accent" : p >= 35 ? "bg-warning" : "bg-danger";
   return (
@@ -83,7 +84,7 @@ function ConfidenceBar({ value }: { value: number }) {
       <span className="w-8 text-right text-xs tabular-nums text-text-secondary">{p}%</span>
     </div>
   );
-}
+});
 
 function TradeButtons({
   tradeStatus,
@@ -213,7 +214,7 @@ function HeroCard({
   );
 }
 
-function SignalCard({
+const SignalCard = memo(function SignalCard({
   signal,
   isExpanded,
   onToggle,
@@ -353,7 +354,7 @@ function SignalCard({
       )}
     </div>
   );
-}
+});
 
 export default function SignalsPage() {
   const { address, chain } = useAccount();
@@ -480,27 +481,39 @@ export default function SignalsPage() {
     }
   }
 
-  // Sorting
-  const sorted = [...signals].sort(
-    sortBy === "confidence"
-      ? (a, b) => b.confidence - a.confidence
-      : (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
+  const sorted = useMemo(
+    () =>
+      [...signals].sort(
+        sortBy === "confidence"
+          ? (a, b) => b.confidence - a.confidence
+          : (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
+      ),
+    [signals, sortBy]
   );
 
-  // Filtering
-  const filtered = filter === "ALL" ? sorted : sorted.filter((s) => s.signal === filter);
+  const filtered = useMemo(
+    () => (filter === "ALL" ? sorted : sorted.filter((s) => s.signal === filter)),
+    [sorted, filter]
+  );
 
-  // Counts for filter pills
-  const counts = {
-    ALL:  signals.length,
-    BUY:  signals.filter((s) => s.signal === "BUY").length,
-    SELL: signals.filter((s) => s.signal === "SELL").length,
-    HOLD: signals.filter((s) => s.signal === "HOLD").length,
-  };
+  const counts = useMemo(
+    () => ({
+      ALL:  signals.length,
+      BUY:  signals.filter((s) => s.signal === "BUY").length,
+      SELL: signals.filter((s) => s.signal === "SELL").length,
+      HOLD: signals.filter((s) => s.signal === "HOLD").length,
+    }),
+    [signals]
+  );
 
-  // Hero: highest-confidence non-HOLD signal from filtered set
-  const heroSignal = filter === "HOLD" ? null : (filtered.find((s) => s.signal !== "HOLD") ?? null);
-  const listSignals = heroSignal ? filtered.filter((s) => s.id !== heroSignal.id) : filtered;
+  const heroSignal = useMemo(
+    () => (filter === "HOLD" ? null : (filtered.find((s) => s.signal !== "HOLD") ?? null)),
+    [filtered, filter]
+  );
+  const listSignals = useMemo(
+    () => (heroSignal ? filtered.filter((s) => s.id !== heroSignal.id) : filtered),
+    [heroSignal, filtered]
+  );
 
   return (
     <div className="space-y-4">

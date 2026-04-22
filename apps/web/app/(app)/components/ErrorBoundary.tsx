@@ -31,6 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="rounded-xl border border-border bg-surface p-6 text-center max-w-sm">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-danger/10">
               <svg
+                aria-hidden="true"
                 width="24"
                 height="24"
                 viewBox="0 0 24 24"

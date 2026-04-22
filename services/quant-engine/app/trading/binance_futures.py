@@ -11,30 +11,37 @@ import httpx
 TESTNET_BASE = "https://testnet.binancefutures.com"
 
 SYMBOL_MAP: dict[str, str] = {
-    # BTC / ETH
+    # Wrapped / aliased
     "BTC": "BTCUSDT", "WBTC": "BTCUSDT",
     "ETH": "ETHUSDT", "WETH": "ETHUSDT",
-    # Top 20 by market cap
+    "MATIC": "MATICUSDT",  # legacy alias; futures pair still MATICUSDT
+    "POL":   "MATICUSDT",
+    # CoinMarketCap top 20 non-stablecoin (April 2026)
     "BNB":  "BNBUSDT",
     "SOL":  "SOLUSDT",
     "XRP":  "XRPUSDT",
-    "ADA":  "ADAUSDT",
     "DOGE": "DOGEUSDT",
+    "TON":  "TONUSDT",
+    "ADA":  "ADAUSDT",
+    "TRX":  "TRXUSDT",
     "AVAX": "AVAXUSDT",
-    "DOT":  "DOTUSDT",
-    "MATIC":"MATICUSDT",
-    "POL":  "MATICUSDT",   # POL rebranded from MATIC; futures pair still MATICUSDT
+    "SHIB": "SHIBUSDT",
     "LINK": "LINKUSDT",
-    "UNI":  "UNIUSDT",
+    "BCH":  "BCHUSDT",
+    "DOT":  "DOTUSDT",
+    "SUI":  "SUIUSDT",
     "LTC":  "LTCUSDT",
-    "ATOM": "ATOMUSDT",
     "NEAR": "NEARUSDT",
+    "UNI":  "UNIUSDT",
+    "HBAR": "HBARUSDT",
+    "APT":  "APTUSDT",
+    # Extended
+    "ATOM": "ATOMUSDT",
     "ARB":  "ARBUSDT",
     "OP":   "OPUSDT",
     "AAVE": "AAVEUSDT",
     "MKR":  "MKRUSDT",
     "INJ":  "INJUSDT",
-    # DeFi extras
     "CRV":  "CRVUSDT",
     "SNX":  "SNXUSDT",
     "COMP": "COMPUSDT",

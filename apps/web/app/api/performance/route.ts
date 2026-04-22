@@ -61,7 +61,8 @@ export async function GET() {
 
   const grossProfit = wins.reduce((a, b) => a + b, 0);
   const grossLoss = Math.abs(losses.reduce((a, b) => a + b, 0));
-  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : Infinity;
+  // null = "no losses yet" (∞); JSON.stringify(Infinity) produces null which breaks .toFixed()
+  const profitFactor = grossLoss > 0 ? Math.round((grossProfit / grossLoss) * 10000) / 10000 : null;
 
   return NextResponse.json({
     totalTrades: closed.length,
@@ -70,7 +71,7 @@ export async function GET() {
     avgPnlPct: Math.round(avgPnl * 10000) / 10000,
     sharpeRatio: Math.round(sharpe * 10000) / 10000,
     maxDrawdownPct: Math.round(maxDrawdown * 100 * 100) / 100,
-    profitFactor: Math.round(profitFactor * 10000) / 10000,
+    profitFactor,
     equityCurve: equity,
     bySignal: {
       buy: pnls.filter((_, i) => closed[i].signal === "BUY"),

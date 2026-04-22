@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useAccount } from "wagmi";
 
 interface TokenHolding {
@@ -78,117 +79,181 @@ export default function DashboardPage() {
     ? [portfolio.nativeToken, ...portfolio.tokens].filter((t) => (t.balance ?? 0) > 0)
     : [];
 
+  const totalValue = portfolio?.totalValueUsd ?? 0;
+
+  if (!isConnected) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-2">
+        <p className="text-[11px] uppercase tracking-[0.15em] text-text-muted">No wallet connected</p>
+        <p className="text-sm text-text-secondary">Connect from the top-right to view your portfolio</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-      {/* Page heading + refresh */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold tracking-tight">Portfolio</h1>
-        {isConnected && (
+    <div className="space-y-10">
+
+      {/* ── Hero: Total Portfolio Value ─────────────────────── */}
+      <div className="pt-2">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] uppercase tracking-[0.15em] text-text-muted mb-2.5">
+              Portfolio Value
+            </p>
+
+            {loading && !portfolio ? (
+              <div className="h-14 w-48 animate-pulse rounded bg-surface-elevated" />
+            ) : (
+              <p className="font-display text-[3.5rem] font-bold tracking-tight leading-none">
+                {portfolio ? fmt(portfolio.totalValueUsd) : "--"}
+              </p>
+            )}
+
+            {portfolio && (
+              <p className="mt-2.5 font-mono text-[11px] text-text-muted">
+                <span className="text-text-secondary">{portfolio.chain}</span>
+                <span className="mx-1.5 text-border">·</span>
+                {portfolio.address.slice(0, 6)}…{portfolio.address.slice(-4)}
+                {portfolio.note && (
+                  <span className="ml-2 text-warning">{portfolio.note}</span>
+                )}
+              </p>
+            )}
+
+            {error && (
+              <p className="mt-2 font-mono text-xs text-danger">Error: {error}</p>
+            )}
+          </div>
+
           <button
             onClick={fetchPortfolio}
             disabled={loading}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-accent/40 disabled:opacity-40"
+            className="mt-1 font-mono text-[11px] uppercase tracking-[0.12em] text-text-muted transition-colors hover:text-text-secondary disabled:opacity-30"
           >
-            {loading ? "Refreshing…" : "Refresh"}
+            {loading ? "···" : "↻ Refresh"}
           </button>
-        )}
+        </div>
       </div>
 
-      {/* Wallet connection gate */}
-      {!isConnected && (
-        <div className="rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
-          <p className="font-medium">Connect your wallet</p>
-          <p className="mt-1 text-sm text-text-secondary">
-            Connect a wallet from the top-right to see your portfolio.
-          </p>
-        </div>
-      )}
-
-      {/* Total value — raw number, no card wrapper */}
-      {isConnected && (
+      {/* ── Holdings ────────────────────────────────────────── */}
+      {allTokens.length > 0 && (
         <div>
-          <p className="text-xs uppercase tracking-widest text-text-muted">Total Portfolio Value</p>
-          {loading && !portfolio ? (
-            <div className="mt-2 h-12 w-48 animate-pulse rounded bg-surface-elevated" />
-          ) : (
-            <p className="font-display mt-2 text-5xl font-bold tracking-tight">
-              {portfolio ? fmt(portfolio.totalValueUsd) : "--"}
-            </p>
-          )}
-          {portfolio && (
-            <p className="mt-1.5 text-xs text-text-muted">
-              {portfolio.chain} · {portfolio.address.slice(0, 6)}…{portfolio.address.slice(-4)}
-              {portfolio.note && (
-                <span className="ml-2 text-warning">{portfolio.note}</span>
-              )}
-            </p>
-          )}
-          {error && (
-            <p className="mt-2 text-sm text-danger">Failed to load: {error}</p>
-          )}
-        </div>
-      )}
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] uppercase tracking-[0.15em] text-text-muted">Holdings</p>
+            <p className="font-mono text-[11px] text-text-muted">{allTokens.length} assets</p>
+          </div>
 
-      {/* Token holdings — one container, divider rows */}
-      {isConnected && allTokens.length > 0 && (
-        <div>
-          <p className="mb-3 text-xs uppercase tracking-widest text-text-muted">Holdings</p>
-          <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            {allTokens.map((token, i) => (
-              <div
-                key={token.address}
-                className={`flex items-center justify-between px-4 py-3.5 ${
-                  i > 0 ? "border-t border-border" : ""
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-elevated text-sm font-bold">
-                    {token.logoUrl
-                      ? <img src={token.logoUrl} alt={token.symbol} className="h-full w-full object-cover" />
-                      : token.symbol?.slice(0, 2)}
+          {/* Column headers */}
+          <div className="grid grid-cols-[1fr_5rem_6rem] gap-x-3 pb-2 border-b border-border">
+            <p className="text-[10px] uppercase tracking-[0.12em] text-text-muted">Asset</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-text-muted text-right">Price</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-text-muted text-right">Value</p>
+          </div>
+
+          {/* Token rows */}
+          <div>
+            {allTokens.map((token) => {
+              const alloc =
+                totalValue > 0 && token.valueUsd != null
+                  ? token.valueUsd / totalValue
+                  : 0;
+
+              return (
+                <div
+                  key={token.address}
+                  className="relative grid grid-cols-[1fr_5rem_6rem] gap-x-3 py-3.5 border-b border-border/50 last:border-b-0"
+                >
+                  {/* Allocation tint — implicit bar chart */}
+                  <div
+                    className="pointer-events-none absolute inset-y-0 left-0 bg-accent/[0.05]"
+                    style={{ width: `${alloc * 100}%` }}
+                    aria-hidden="true"
+                  />
+
+                  {/* Token identity */}
+                  <div className="relative flex items-center gap-2.5">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-elevated text-[10px] font-bold">
+                      {token.logoUrl ? (
+                        <Image
+                          src={token.logoUrl}
+                          alt={token.symbol}
+                          width={28}
+                          height={28}
+                          className="h-full w-full object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        token.symbol?.slice(0, 2)
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold leading-tight">{token.symbol}</p>
+                      <p className="font-mono text-[11px] text-text-muted leading-tight">
+                        {fmtBalance(token.balance)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{token.symbol}</p>
-                    <p className="text-xs text-text-muted">
-                      {fmtBalance(token.balance)} {token.symbol}
-                    </p>
+
+                  {/* Price */}
+                  <div className="relative flex items-center justify-end">
+                    {token.priceUsd != null && (
+                      <p className="font-mono text-xs text-text-secondary">
+                        {fmt(token.priceUsd, 4)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Value + allocation % */}
+                  <div className="relative text-right">
+                    <p className="font-mono text-sm font-semibold">{fmt(token.valueUsd)}</p>
+                    {alloc > 0 && (
+                      <p className="font-mono text-[11px] text-text-muted">
+                        {(alloc * 100).toFixed(1)}%
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold">{fmt(token.valueUsd)}</p>
-                  {token.priceUsd != null && (
-                    <p className="text-xs text-text-muted">{fmt(token.priceUsd, 4)}</p>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* LP positions — same list treatment */}
-      {isConnected && portfolio && portfolio.lpPositions.length > 0 && (
+      {/* ── LP Positions ─────────────────────────────────────── */}
+      {portfolio && portfolio.lpPositions.length > 0 && (
         <div>
-          <p className="mb-3 text-xs uppercase tracking-widest text-text-muted">LP Positions</p>
-          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+          <p className="text-[11px] uppercase tracking-[0.15em] text-text-muted mb-3">
+            LP Positions
+          </p>
+
+          <div className="grid grid-cols-[1fr_5rem_6rem] gap-x-3 pb-2 border-b border-border">
+            <p className="text-[10px] uppercase tracking-[0.12em] text-text-muted">Position</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-text-muted text-right">Shares</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-text-muted text-right">Value</p>
+          </div>
+
+          <div>
             {portfolio.lpPositions.map((lp, i) => (
               <div
                 key={lp.address}
-                className={`flex items-center justify-between px-4 py-3.5 ${
-                  i > 0 ? "border-t border-border" : ""
+                className={`grid grid-cols-[1fr_5rem_6rem] gap-x-3 py-3.5 ${
+                  i > 0 ? "border-t border-border/50" : ""
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-bold text-accent">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-[10px] font-bold text-accent">
                     LP
                   </div>
-                  <div>
-                    <p className="font-medium">{lp.symbol || "LP Token"}</p>
-                    <p className="text-xs text-text-muted">{fmtBalance(lp.balance)} shares</p>
-                  </div>
+                  <p className="text-sm font-semibold">{lp.symbol || "LP Token"}</p>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold">{fmt(lp.valueUsd)}</p>
+                <div className="flex items-center justify-end">
+                  <p className="font-mono text-xs text-text-secondary">
+                    {fmtBalance(lp.balance)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-end">
+                  <p className="font-mono text-sm font-semibold">{fmt(lp.valueUsd)}</p>
                 </div>
               </div>
             ))}
@@ -196,13 +261,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Empty state */}
-      {isConnected && !loading && portfolio && allTokens.length === 0 && (
-        <div className="rounded-xl border border-border bg-surface p-6 text-center">
-          <p className="text-text-muted">No token balances found on this chain.</p>
-          <p className="mt-1 text-xs text-text-muted">
-            Switch networks or check your connection.
-          </p>
+      {/* ── Empty state ──────────────────────────────────────── */}
+      {!loading && portfolio && allTokens.length === 0 && (
+        <div className="py-12 text-center">
+          <p className="text-sm text-text-muted">No token balances on this chain.</p>
+          <p className="mt-1 text-xs text-text-muted">Switch networks or check your connection.</p>
         </div>
       )}
     </div>

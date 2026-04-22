@@ -15,6 +15,8 @@ interface PaperTrade {
   regime: string;
   status: string;
   pnlPct: number | null;
+  currentPrice: number | null;
+  unrealizedPnlPct: number | null;
   openedAt: string;
   closedAt: string | null;
 }
@@ -46,7 +48,7 @@ interface PerformanceMetrics {
   avgPnlPct: number;
   sharpeRatio: number;
   maxDrawdownPct: number;
-  profitFactor: number;
+  profitFactor: number | null;
   equityCurve: number[];
 }
 
@@ -258,9 +260,9 @@ export default function PerformancePage() {
             />
             <MetricCard
               label="Profit Factor"
-              value={metrics.totalTrades && metrics.profitFactor !== Infinity
-                ? metrics.profitFactor.toFixed(2)
-                : metrics.totalTrades ? "∞" : "--"}
+              value={metrics.totalTrades
+                ? metrics.profitFactor != null ? metrics.profitFactor.toFixed(2) : "∞"
+                : "--"}
             />
             <MetricCard
               label="Open Trades"
@@ -409,6 +411,12 @@ export default function PerformancePage() {
                     Entry: ${trade.entryPrice.toPrecision(5)}
                     {trade.exitPrice != null && ` → Exit: $${trade.exitPrice.toPrecision(5)}`}
                   </p>
+                  {trade.status === "open" && trade.currentPrice != null && (
+                    <p className="text-xs text-text-muted">
+                      TP {(((trade.targetPrice - trade.currentPrice) / trade.currentPrice) * 100).toFixed(1)}% away
+                      {" · "}SL {(((trade.currentPrice - trade.stopPrice) / trade.currentPrice) * 100).toFixed(1)}% away
+                    </p>
+                  )}
                   <p className="text-xs text-text-muted">
                     Kelly {(trade.positionSizeFraction * 100).toFixed(1)}%
                     {" · "}{Math.round(trade.confidence * 100)}% conf
@@ -421,6 +429,17 @@ export default function PerformancePage() {
                   {trade.pnlPct != null && (
                     <p className={`text-xs font-medium ${trade.pnlPct >= 0 ? "text-success" : "text-danger"}`}>
                       {trade.pnlPct > 0 ? "+" : ""}{trade.pnlPct.toFixed(2)}%
+                    </p>
+                  )}
+                  {trade.status === "open" && trade.unrealizedPnlPct != null && (
+                    <p className={`text-xs font-medium ${trade.unrealizedPnlPct >= 0 ? "text-success" : "text-danger"}`}>
+                      {trade.unrealizedPnlPct > 0 ? "+" : ""}{trade.unrealizedPnlPct.toFixed(2)}%
+                      <span className="ml-1 text-text-muted">(live)</span>
+                    </p>
+                  )}
+                  {trade.status === "open" && trade.currentPrice != null && (
+                    <p className="text-xs text-text-muted">
+                      Now ${trade.currentPrice.toPrecision(5)}
                     </p>
                   )}
                 </div>
@@ -456,7 +475,11 @@ export default function PerformancePage() {
                       </div>
                       {/* Custom exit — for mid-trade discretionary closes */}
                       <div className="flex gap-2">
+                        <label htmlFor={`exit-price-${trade.id}`} className="sr-only">
+                          Custom exit price for {trade.symbol} (USD)
+                        </label>
                         <input
+                          id={`exit-price-${trade.id}`}
                           type="number"
                           min="0.000001"
                           step="any"
@@ -490,7 +513,8 @@ export default function PerformancePage() {
                   ) : (
                     <button
                       onClick={() => { setClosingId(trade.id); setCloseError(null); }}
-                      className="text-xs text-accent hover:underline"
+                      aria-label={`Close ${trade.symbol} trade`}
+                      className="min-h-[44px] px-1 text-xs text-accent hover:underline"
                     >
                       Close trade
                     </button>

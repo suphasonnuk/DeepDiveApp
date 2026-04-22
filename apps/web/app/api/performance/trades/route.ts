@@ -3,6 +3,20 @@ import { db } from "@deepdive/db";
 import { paperTrades } from "@deepdive/db";
 import { desc, eq } from "@deepdive/db";
 
+async function getBinanceSpotPrice(symbol: string): Promise<number | null> {
+  try {
+    const res = await fetch(
+      `https://api.binance.com/api/v3/ticker/price?symbol=${symbol.toUpperCase()}USDT`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return parseFloat(data.price);
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
@@ -15,7 +29,25 @@ export async function GET(request: NextRequest) {
     .orderBy(desc(paperTrades.openedAt))
     .limit(limit);
 
-  return NextResponse.json({ trades: rows, total: rows.length });
+  // Fetch current spot prices for open trades to compute unrealized P&L
+  const openRows = rows.filter((t) => t.status === "open");
+  const uniqueSymbols = [...new Set(openRows.map((t) => t.symbol))];
+  const priceMap: Record<string, number | null> = {};
+  await Promise.all(
+    uniqueSymbols.map(async (sym) => { priceMap[sym] = await getBinanceSpotPrice(sym); })
+  );
+
+  const trades = rows.map((t) => {
+    if (t.status !== "open") return { ...t, currentPrice: null, unrealizedPnlPct: null };
+    const current = priceMap[t.symbol];
+    if (current == null) return { ...t, currentPrice: null, unrealizedPnlPct: null };
+    const pct = t.signal === "BUY"
+      ? ((current - t.entryPrice) / t.entryPrice) * 100
+      : ((t.entryPrice - current) / t.entryPrice) * 100;
+    return { ...t, currentPrice: current, unrealizedPnlPct: Math.round(pct * 100) / 100 };
+  });
+
+  return NextResponse.json({ trades, total: trades.length });
 }
 
 export async function POST(request: NextRequest) {

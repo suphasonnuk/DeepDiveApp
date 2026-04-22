@@ -18,8 +18,8 @@ REGIME_WEIGHTS: dict[str, dict[str, float]] = {
 }
 
 _SIGNAL_SCORE = {"BUY": 1, "HOLD": 0, "SELL": -1}
-_BUY_THRESHOLD = 0.15
-_SELL_THRESHOLD = -0.15
+_BUY_THRESHOLD = 0.10
+_SELL_THRESHOLD = -0.10
 
 
 class SignalGenerator:
@@ -79,15 +79,17 @@ class SignalGenerator:
             combined_confidence = round(model_certainty, 4)
 
         # --- 5. Risk levels ---
-        ou_sigma_eq = self.ou.sigma_eq if self.ou.sigma_eq > 0 else current_price * 0.03
+        # sigma_eq is now dimensionless (log-scale ≈ % units) after OU detrending fix.
+        # Fallback 0.03 = 3% typical crypto vol if OU didn't fit.
+        ou_sigma_eq = self.ou.sigma_eq if self.ou.sigma_eq > 0 else 0.03
         z = ou_sig.get("z_score", 0.0) or 0.0
         hl = ou_sig.get("half_life_days", 15.0) or 15.0
 
         # Target: regime-weighted blend of each model's natural price objective.
-        # Kalman contributes its fair-value deviation; OU contributes reversion distance to μ.
+        # Kalman contributes its fair-value deviation; OU contributes reversion distance to trend.
         # In BULL (60/40): Kalman fair-value dominates. In SIDEWAYS (20/80): OU dominates.
         k_dev = abs(kalman_sig.get("deviation_pct", 0.0)) / 100.0
-        ou_reversion = abs(z) * ou_sigma_eq / (current_price + 1e-12) if z else 0.0
+        ou_reversion = abs(z) * ou_sigma_eq if z else 0.0  # dimensionless: |z| × σ_eq
         target_pct = float(np.clip(
             weights["kalman"] * k_dev + weights["ou"] * ou_reversion,
             0.01, 0.30,
@@ -97,7 +99,7 @@ class SignalGenerator:
         # A 10-day trade gets a 1.0× stop; a 40-day trade gets a ~2× stop.
         # Prevents shake-outs on longer mean-reversion cycles.
         hl_scale = float(np.clip(np.sqrt(hl / 10.0), 0.7, 2.0))
-        stop_pct = float(np.clip(ou_sigma_eq / (current_price + 1e-12) * hl_scale, 0.005, 0.15))
+        stop_pct = float(np.clip(ou_sigma_eq * hl_scale, 0.005, 0.15))
 
         if final_signal == "BUY":
             target_price = current_price * (1 + target_pct)

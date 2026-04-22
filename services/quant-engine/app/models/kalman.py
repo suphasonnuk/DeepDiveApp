@@ -89,23 +89,23 @@ class PriceKalmanFilter:
                 "deviation_pct": round(deviation * 100, 2),
                 "reason": f"price {deviation*100:.1f}% above Kalman fair value with negative momentum",
             }
-        if norm_velocity > 0.5:
+        if norm_velocity > 0.3:
             return {
                 "signal": "BUY",
                 "confidence": round(confidence * 0.6, 4),
                 "fair_value": round(fair_value, 6),
                 "velocity": round(velocity, 8),
                 "deviation_pct": round(deviation * 100, 2),
-                "reason": "strong upward velocity trend",
+                "reason": "upward velocity trend",
             }
-        if norm_velocity < -0.5:
+        if norm_velocity < -0.3:
             return {
                 "signal": "SELL",
                 "confidence": round(confidence * 0.6, 4),
                 "fair_value": round(fair_value, 6),
                 "velocity": round(velocity, 8),
                 "deviation_pct": round(deviation * 100, 2),
-                "reason": "strong downward velocity trend",
+                "reason": "downward velocity trend",
             }
         return {
             "signal": "HOLD",

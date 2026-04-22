@@ -8,6 +8,7 @@ const CHAIN_ID_TO_COVALENT: Record<number, string> = {
   42161: "arbitrum-mainnet",
   8453:  "base-mainnet",
   137:   "matic-mainnet",
+  56:    "bsc-mainnet",
 };
 
 const CHAIN_ID_TO_DEFILLAMA: Record<number, string> = {
@@ -15,6 +16,7 @@ const CHAIN_ID_TO_DEFILLAMA: Record<number, string> = {
   42161: "arbitrum",
   8453:  "base",
   137:   "polygon",
+  56:    "bsc",
 };
 
 async function getNativeBalance(address: string, chainId: number): Promise<number> {
@@ -107,14 +109,20 @@ export async function GET(request: NextRequest) {
     getErc20Balances(address, chainId),
   ]);
 
-  // Fetch ETH price for native balance valuation
-  const nativeSymbol = chainId === 137 ? "MATIC" : "ETH";
-  const nativePrice = await getTokenPrice(nativeSymbol);
+  const NATIVE: Record<number, { symbol: string; name: string }> = {
+    1:     { symbol: "ETH",  name: "Ethereum" },
+    42161: { symbol: "ETH",  name: "Ethereum" },
+    8453:  { symbol: "ETH",  name: "Ethereum" },
+    137:   { symbol: "POL",  name: "Polygon" },
+    56:    { symbol: "BNB",  name: "BNB Chain" },
+  };
+  const native = NATIVE[chainId] ?? { symbol: "ETH", name: "Ethereum" };
+  const nativePrice = await getTokenPrice(native.symbol);
   const nativeValueUsd = nativePrice ? nativeBalance * nativePrice : null;
 
   const nativeToken = {
-    symbol: nativeSymbol,
-    name: chainId === 137 ? "Polygon" : "Ethereum",
+    symbol: native.symbol,
+    name: native.name,
     address: "native",
     balance: nativeBalance,
     priceUsd: nativePrice,

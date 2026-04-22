@@ -19,6 +19,8 @@ export function TopHeader() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showConnectors, setShowConnectors] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const walletBtnRef = useRef<HTMLButtonElement>(null);
+  const connectBtnRef = useRef<HTMLButtonElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -35,6 +37,45 @@ export function TopHeader() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Focus first menu item when connected dropdown opens
+  useEffect(() => {
+    if (showDropdown) {
+      setTimeout(() => {
+        dropdownRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+      }, 0);
+    }
+  }, [showDropdown]);
+
+  // Focus first connector button when connector picker opens
+  useEffect(() => {
+    if (showConnectors) {
+      setTimeout(() => {
+        dropdownRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+      }, 0);
+    }
+  }, [showConnectors]);
+
+  function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Escape") {
+      setShowDropdown(false);
+      setShowConnectors(false);
+      (walletBtnRef.current || connectBtnRef.current)?.focus();
+      return;
+    }
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')
+    );
+    if (!items.length) return;
+    const idx = items.indexOf(document.activeElement as HTMLElement);
+    const next =
+      e.key === "ArrowDown"
+        ? (idx + 1) % items.length
+        : (idx - 1 + items.length) % items.length;
+    items[next]?.focus();
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
@@ -47,10 +88,11 @@ export function TopHeader() {
         </div>
 
         {/* Wallet Button */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative" ref={dropdownRef} onKeyDown={handleMenuKeyDown}>
           {isConnected && address ? (
             <>
               <button
+                ref={walletBtnRef}
                 onClick={() => setShowDropdown(!showDropdown)}
                 aria-haspopup="true"
                 aria-expanded={showDropdown}
@@ -100,6 +142,7 @@ export function TopHeader() {
                       <button
                         key={c.id}
                         role="menuitem"
+                        tabIndex={-1}
                         onClick={() => {
                           switchChain({ chainId: c.id });
                           setShowDropdown(false);
@@ -121,6 +164,8 @@ export function TopHeader() {
                   {/* Disconnect */}
                   <div className="border-t border-border pt-1 mt-1">
                     <button
+                      role="menuitem"
+                      tabIndex={-1}
                       onClick={() => {
                         disconnect();
                         setShowDropdown(false);
@@ -136,6 +181,7 @@ export function TopHeader() {
           ) : (
             <>
               <button
+                ref={connectBtnRef}
                 onClick={() => setShowConnectors(!showConnectors)}
                 disabled={isPending}
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
@@ -145,13 +191,15 @@ export function TopHeader() {
 
               {/* Connector Picker */}
               {showConnectors && (
-                <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-xl">
+                <div role="menu" className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-xl">
                   <p className="px-3 py-2 text-xs text-text-muted">
                     Choose Wallet
                   </p>
                   {connectors.map((connector) => (
                     <button
                       key={connector.id}
+                      role="menuitem"
+                      tabIndex={-1}
                       onClick={() => {
                         connect({ connector });
                         setShowConnectors(false);

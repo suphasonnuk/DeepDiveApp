@@ -6,20 +6,27 @@ from scipy import stats
 
 class OrnsteinUhlenbeck:
     """
-    Ornstein-Uhlenbeck mean reversion model.
+    Ornstein-Uhlenbeck mean reversion model fitted on detrended log-prices.
 
-    Continuous SDE:  dX = θ(μ - X)dt + σdW
-    Discrete fit via OLS: X(t+1) = α + β·X(t) + ε
+    Fitting on raw prices fails for trending assets (BTC $40K→$100K): the OLS
+    β approaches 1 (unit root), making half-life infinite and the signal always HOLD.
+
+    Fix: work in log-price space, remove the linear time trend, then fit OU on
+    the residuals (spread). The spread IS stationary — it measures deviation from
+    the current trend line, which mean-reverts even when the raw price is trending.
+
+    Continuous SDE:  dS = θ(μ - S)dt + σdW   where S = log(P) − trend(t)
+    Discrete fit via OLS: S(t+1) = α + β·S(t) + ε
 
     Parameters derived:
       θ (mean-reversion speed) = -ln(β) / dt
-      μ (long-run mean)        = α / (1 - β)
-      σ (vol)                  = std(ε) · √(2θ / (1 - β²))
+      μ (long-run mean of spread) ≈ 0 after detrending
+      σ_eq (equilibrium vol)   = σ / √(2θ)   [dimensionless, log-scale ≈ % units]
       half_life (days)         = ln(2) / θ
 
-    Z-score = (X - μ) / σ_eq  where σ_eq = σ / √(2θ)
-    Signals: z < -2 → BUY (oversold, expect reversion upward)
-             z > +2 → SELL (overbought, expect reversion downward)
+    Z-score = (S_current − μ) / σ_eq
+    Signals: z < -2 → BUY (below trend, expect reversion upward)
+             z > +2 → SELL (above trend, expect reversion downward)
     """
 
     def __init__(self):
@@ -28,19 +35,28 @@ class OrnsteinUhlenbeck:
         self.sigma: float | None = None
         self.half_life: float | None = None
         self._sigma_eq: float | None = None
+        self._spread: np.ndarray | None = None  # detrended log-price series
 
     def fit(self, prices: np.ndarray, dt: float = 1.0) -> "OrnsteinUhlenbeck":
-        x, y = prices[:-1], prices[1:]
+        log_p = np.log(prices + 1e-12)
+        t = np.arange(len(log_p), dtype=float)
+
+        # Remove linear time trend so the residual (spread) is stationary
+        trend = np.polyfit(t, log_p, 1)
+        spread = log_p - np.polyval(trend, t)
+
+        x, y = spread[:-1], spread[1:]
         slope, intercept, _, _, _ = stats.linregress(x, y)
 
         beta = float(np.clip(slope, 0.01, 0.9999))
         residuals = y - (slope * x + intercept)
 
         self.theta = -np.log(beta) / dt
-        self.mu = intercept / (1.0 - beta)
+        self.mu = intercept / (1.0 - beta)          # long-run mean of spread (~0)
         self.sigma = float(np.std(residuals)) * np.sqrt(2.0 * self.theta / (1.0 - beta**2))
         self.half_life = np.log(2.0) / self.theta
-        self._sigma_eq = self.sigma / np.sqrt(2.0 * self.theta)
+        self._sigma_eq = self.sigma / np.sqrt(2.0 * self.theta)  # dimensionless (log-scale)
+        self._spread = spread
         return self
 
     @property
@@ -48,9 +64,10 @@ class OrnsteinUhlenbeck:
         return self._sigma_eq or 0.0
 
     def z_score(self, price: float) -> float:
-        if not self.mu or not self._sigma_eq or self._sigma_eq < 1e-12:
+        # Uses the last spread value from fit() — price arg kept for API compat
+        if self._spread is None or self._sigma_eq is None or self._sigma_eq < 1e-12:
             return 0.0
-        return (price - self.mu) / self._sigma_eq
+        return (float(self._spread[-1]) - (self.mu or 0.0)) / self._sigma_eq
 
     def get_signal(self, prices: np.ndarray) -> dict:
         if len(prices) < 30:
@@ -59,8 +76,9 @@ class OrnsteinUhlenbeck:
         self.fit(prices)
 
         # Reject if not mean-reverting on a tradeable timescale.
-        # Upper bound 60d: with 200 samples, >60d half-life has <3 full cycles in-sample.
-        if self.half_life is None or self.half_life > 60 or self.half_life < 2:
+        # Upper bound 90d: detrended series reverts faster than raw prices,
+        # so 90d allows capturing slower cycles without admitting random walks.
+        if self.half_life is None or self.half_life > 90 or self.half_life < 2:
             hl = self.half_life or 0.0
             return {
                 "signal": "HOLD",

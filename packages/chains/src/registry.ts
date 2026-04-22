@@ -10,6 +10,7 @@ import {
   arbitrum,
   base,
   polygon,
+  bsc,
 } from "viem/chains";
 
 export interface ChainConfig {
@@ -57,6 +58,14 @@ export const chainRegistry: Record<number, ChainConfig> = {
     chain: polygon,
     rpcUrl: process.env.NEXT_PUBLIC_RPC_POLYGON,
     blockExplorer: "https://polygonscan.com",
+    dex: {
+      tradeXyz: undefined,
+    },
+  },
+  [bsc.id]: {
+    chain: bsc,
+    rpcUrl: process.env.NEXT_PUBLIC_RPC_BSC,
+    blockExplorer: "https://bscscan.com",
     dex: {
       tradeXyz: undefined,
     },
