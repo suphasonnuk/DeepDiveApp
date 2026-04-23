@@ -32,15 +32,18 @@ type SortBy = "confidence" | "recency";
 type TradeStatus = "idle" | "opening" | "done" | "error";
 type BinStatus = "idle" | "opening" | "done" | "skipped" | "error";
 
-// CoinMarketCap top 20 non-stablecoin tokens (April 2026)
+// CoinMarketCap top 30 non-stablecoin tokens (April 2026), filtered to those
+// with Binance USDT spot pairs so OHLCV-driven signals are reliable.
+// Excluded (no Binance spot): HYPE, LEO, XMR, CC, M, CRO, MNT.
 const QUICK_SCAN_TOKENS: PortfolioToken[] = [
-  { symbol: "BTC" },  { symbol: "ETH" },  { symbol: "BNB" },
-  { symbol: "SOL" },  { symbol: "XRP" },  { symbol: "DOGE" },
-  { symbol: "TON" },  { symbol: "ADA" },  { symbol: "TRX" },
-  { symbol: "AVAX" }, { symbol: "SHIB" }, { symbol: "LINK" },
-  { symbol: "BCH" },  { symbol: "DOT" },  { symbol: "SUI" },
-  { symbol: "LTC" },  { symbol: "NEAR" }, { symbol: "UNI" },
-  { symbol: "HBAR" }, { symbol: "APT" },
+  { symbol: "BTC" },  { symbol: "ETH" },  { symbol: "XRP" },
+  { symbol: "BNB" },  { symbol: "SOL" },  { symbol: "TRX" },
+  { symbol: "DOGE" }, { symbol: "BCH" },  { symbol: "ADA" },
+  { symbol: "LINK" }, { symbol: "XLM" },  { symbol: "ZEC" },
+  { symbol: "LTC" },  { symbol: "AVAX" }, { symbol: "HBAR" },
+  { symbol: "SUI" },  { symbol: "SHIB" }, { symbol: "TON" },
+  { symbol: "TAO" },  { symbol: "WLFI" }, { symbol: "UNI" },
+  { symbol: "DOT" },  { symbol: "SKY" },
 ];
 
 const SIGNAL_STYLE = {
