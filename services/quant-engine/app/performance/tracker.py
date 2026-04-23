@@ -73,11 +73,12 @@ class PaperTradeTracker:
             return None
 
         if trade.signal == "BUY":
-            pnl_pct = (exit_price - trade.entry_price) / trade.entry_price * 100
+            raw_pnl_pct = (exit_price - trade.entry_price) / trade.entry_price * 100
         else:
-            pnl_pct = (trade.entry_price - exit_price) / trade.entry_price * 100
+            raw_pnl_pct = (trade.entry_price - exit_price) / trade.entry_price * 100
 
-        # Determine close reason
+        pnl_pct = raw_pnl_pct * trade.leverage
+
         if trade.signal == "BUY":
             if exit_price >= trade.target_price:
                 status = "closed_target"
@@ -95,7 +96,8 @@ class PaperTradeTracker:
 
         trade.exit_price = exit_price
         trade.pnl_pct = round(pnl_pct, 4)
-        trade.pnl_usd = round(pnl_pct / 100 * trade.position_size_usd, 4) if trade.position_size_usd else None
+        if trade.position_size_usd:
+            trade.pnl_usd = round(pnl_pct / 100 * (trade.position_size_usd / trade.leverage), 4)
         trade.status = status
         trade.closed_at = datetime.now(timezone.utc)
         return trade
@@ -116,31 +118,52 @@ class PaperTradeTracker:
                 "equity_curve": [1.0],
             }
 
-        pnls = np.array([t.pnl_pct for t in closed])
-        wins = pnls > 0
+        portfolio_returns = []
+        for t in closed:
+            position_return = (t.pnl_pct or 0.0) / 100.0
+            portfolio_impact = position_return * t.position_size_fraction
+            portfolio_returns.append(portfolio_impact)
+
+        pr = np.array(portfolio_returns)
+        pnl_pcts = np.array([t.pnl_pct for t in closed])
+        wins = pnl_pcts > 0
         win_rate = float(np.mean(wins) * 100)
 
-        # Annualised Sharpe (assume each closed trade ~ 1 day average hold)
-        sharpe = float((np.mean(pnls) / (np.std(pnls) + 1e-10)) * np.sqrt(252))
+        hold_durations = []
+        for t in closed:
+            if t.opened_at and t.closed_at:
+                delta = (t.closed_at - t.opened_at).total_seconds() / 86400.0
+                hold_durations.append(max(delta, 1.0))
+            else:
+                hold_durations.append(1.0)
 
-        # Max drawdown on equity curve
-        equity = np.cumprod(1 + pnls / 100)
+        avg_hold_days = float(np.mean(hold_durations))
+        trades_per_year = 252.0 / avg_hold_days if avg_hold_days > 0 else 252.0
+
+        if len(pr) > 1 and np.std(pr) > 1e-10:
+            sharpe = float(np.mean(pr) / np.std(pr) * np.sqrt(trades_per_year))
+        else:
+            sharpe = 0.0
+
+        equity = np.cumprod(1 + pr)
         rolling_max = np.maximum.accumulate(equity)
         drawdowns = (equity - rolling_max) / (rolling_max + 1e-10)
         max_drawdown = float(np.min(drawdowns) * 100)
 
-        gross_profit = float(np.sum(pnls[pnls > 0]))
-        gross_loss = float(abs(np.sum(pnls[pnls < 0])))
+        gross_profit = float(np.sum(pr[pr > 0]))
+        gross_loss = float(abs(np.sum(pr[pr < 0])))
         profit_factor = round(gross_profit / gross_loss, 4) if gross_loss > 0 else float("inf")
 
         return {
             "total_trades": len(closed),
             "open_trades": len(open_trades),
             "win_rate": round(win_rate, 2),
-            "avg_pnl_pct": round(float(np.mean(pnls)), 4),
+            "avg_pnl_pct": round(float(np.mean(pnl_pcts)), 4),
+            "avg_portfolio_impact_pct": round(float(np.mean(pr) * 100), 4),
             "sharpe_ratio": round(sharpe, 4),
             "max_drawdown_pct": round(max_drawdown, 4),
             "profit_factor": profit_factor,
+            "avg_hold_days": round(avg_hold_days, 1),
             "equity_curve": equity.tolist(),
         }
 
