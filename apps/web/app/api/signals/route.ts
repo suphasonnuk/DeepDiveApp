@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
         stopPct: risk?.stop_pct as number,
         riskRewardRatio: risk?.risk_reward_ratio as number,
         kellyFraction: position?.kelly_fraction as number,
+        suggestedLeverage: position?.suggested_leverage as number,
         delta: position?.delta as number,
         kalmanReason: kalman?.reason as string,
         ouZScore: ou?.z_score as number,

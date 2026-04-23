@@ -55,6 +55,8 @@ class OpenTradeRequest(BaseModel):
     signal: str
     entry_price: float
     position_size_fraction: float
+    position_size_usd: Optional[float] = None
+    leverage: float = 1.0
     target_price: float
     stop_price: float
     confidence: float
@@ -137,6 +139,8 @@ def open_paper_trade(req: OpenTradeRequest):
         signal=req.signal,
         entry_price=req.entry_price,
         position_size=req.position_size_fraction,
+        position_size_usd=req.position_size_usd,
+        leverage=req.leverage,
         target_price=req.target_price,
         stop_price=req.stop_price,
         confidence=req.confidence,

@@ -57,8 +57,9 @@ export const quantSignals = sqliteTable("quant_signals", {
   stopPct: real("stop_pct"),
   riskRewardRatio: real("risk_reward_ratio"),
 
-  // Position sizing (Kelly)
+  // Position sizing (Kelly + leverage)
   kellyFraction: real("kelly_fraction"),        // recommended portfolio fraction
+  suggestedLeverage: real("suggested_leverage"), // model-suggested leverage multiplier
   delta: real("delta"),                         // directional delta (+1 long, -1 short)
 
   // Model details (JSON)
@@ -78,6 +79,16 @@ export const quantSignals = sqliteTable("quant_signals", {
 }));
 
 /**
+ * Portfolio — Single-row state for the paper trading portfolio.
+ * Balance starts at $1000 and is updated on each trade close.
+ */
+export const portfolio = sqliteTable("portfolio", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  balanceUsd: real("balance_usd").notNull().default(1000),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+/**
  * Paper Trades — Simulated trades based on quant signals (for performance validation)
  */
 export const paperTrades = sqliteTable("paper_trades", {
@@ -91,6 +102,9 @@ export const paperTrades = sqliteTable("paper_trades", {
   entryPrice: real("entry_price").notNull(),
   exitPrice: real("exit_price"),
   positionSizeFraction: real("position_size_fraction").notNull(),  // Kelly fraction used
+  positionSizeUsd: real("position_size_usd"),   // notional USD at entry (balance × kelly)
+  leverage: real("leverage").notNull().default(1),
+  marginUsed: real("margin_used"),              // positionSizeUsd / leverage
   targetPrice: real("target_price").notNull(),
   stopPrice: real("stop_price").notNull(),
   confidence: real("confidence").notNull(),
@@ -98,7 +112,8 @@ export const paperTrades = sqliteTable("paper_trades", {
 
   // Outcome
   status: text("status").notNull().default("open"),  // open | closed_profit | closed_loss | closed_target | closed_stop
-  pnlPct: real("pnl_pct"),                           // % P&L when closed
+  pnlPct: real("pnl_pct"),                           // % P&L on notional when closed
+  pnlUsd: real("pnl_usd"),                           // USD P&L on notional when closed
 
   openedAt: integer("opened_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   closedAt: integer("closed_at", { mode: "timestamp" }),
@@ -161,3 +176,4 @@ export type PaperTrade = typeof paperTrades.$inferSelect;
 export type NewPaperTrade = typeof paperTrades.$inferInsert;
 export type AutoPosition = typeof autoPositions.$inferSelect;
 export type NewAutoPosition = typeof autoPositions.$inferInsert;
+export type Portfolio = typeof portfolio.$inferSelect;

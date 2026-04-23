@@ -17,6 +17,7 @@ interface QuantSignal {
   stopPct: number | null;
   riskRewardRatio: number | null;
   kellyFraction: number | null;
+  suggestedLeverage: number | null;
   delta: number | null;
   kalmanReason: string | null;
   ouZScore: number | null;
@@ -135,18 +136,24 @@ function TradeButtons({
 
 function HeroCard({
   signal,
+  portfolioBalance,
   tradeStatus,
   bStatus,
   onPaper,
   onBinance,
 }: {
   signal: QuantSignal;
+  portfolioBalance: number;
   tradeStatus: TradeStatus;
   bStatus: BinStatus;
   onPaper: () => void;
   onBinance: () => void;
 }) {
   const style = SIGNAL_STYLE[signal.signal as keyof typeof SIGNAL_STYLE] ?? SIGNAL_STYLE.HOLD;
+  const kelly = signal.kellyFraction ?? 0;
+  const leverage = signal.suggestedLeverage ?? 1.0;
+  const positionUsd = Math.round(portfolioBalance * kelly * 100) / 100;
+  const marginUsd = leverage > 0 ? Math.round((positionUsd / leverage) * 100) / 100 : positionUsd;
 
   return (
     <div className="rounded-xl bg-surface-elevated p-5 space-y-4">
@@ -165,9 +172,14 @@ function HeroCard({
         </div>
         <div className="text-right shrink-0">
           <p className="font-semibold">{fmt(signal.priceAtSignal)}</p>
-          {signal.kellyFraction != null && (
+          {kelly > 0 && (
             <p className="mt-0.5 text-xs text-text-muted">
-              Kelly {(signal.kellyFraction * 100).toFixed(1)}%
+              Kelly {(kelly * 100).toFixed(1)}% · <span className="font-medium">${positionUsd.toFixed(2)}</span>
+            </p>
+          )}
+          {leverage > 1 && (
+            <p className="text-xs text-text-muted">
+              <span className="font-medium text-accent">{leverage}×</span> leverage · ${marginUsd.toFixed(2)} margin
             </p>
           )}
           {signal.riskRewardRatio != null && (
@@ -216,6 +228,7 @@ function HeroCard({
 
 const SignalCard = memo(function SignalCard({
   signal,
+  portfolioBalance,
   isExpanded,
   onToggle,
   tradeStatus,
@@ -224,6 +237,7 @@ const SignalCard = memo(function SignalCard({
   onBinance,
 }: {
   signal: QuantSignal;
+  portfolioBalance: number;
   isExpanded: boolean;
   onToggle: () => void;
   tradeStatus: TradeStatus;
@@ -232,6 +246,9 @@ const SignalCard = memo(function SignalCard({
   onBinance: () => void;
 }) {
   const style = SIGNAL_STYLE[signal.signal as keyof typeof SIGNAL_STYLE] ?? SIGNAL_STYLE.HOLD;
+  const kelly = signal.kellyFraction ?? 0;
+  const leverage = signal.suggestedLeverage ?? 1.0;
+  const positionUsd = Math.round(portfolioBalance * kelly * 100) / 100;
 
   return (
     <div className={`rounded-xl border bg-surface ${style.border}`}>
@@ -287,9 +304,14 @@ const SignalCard = memo(function SignalCard({
                 )}
               </span>
             )}
-            {signal.kellyFraction != null && (
+            {kelly > 0 && (
               <span className="ml-auto text-text-muted">
-                Kelly {(signal.kellyFraction * 100).toFixed(1)}%
+                Kelly {(kelly * 100).toFixed(1)}%
+                {" · "}
+                <span className="font-medium">${positionUsd.toFixed(2)}</span>
+                {leverage > 1 && (
+                  <span className="text-accent"> {leverage}×</span>
+                )}
               </span>
             )}
           </div>
@@ -368,11 +390,17 @@ export default function SignalsPage() {
   const [scanInfo, setScanInfo] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("ALL");
   const [sortBy, setSortBy] = useState<SortBy>("confidence");
+  const [portfolioBalance, setPortfolioBalance] = useState<number>(1000);
 
   useEffect(() => {
-    fetch("/api/signals?active=true&limit=30")
-      .then((r) => r.json())
-      .then((d) => setSignals(d.signals ?? []))
+    Promise.all([
+      fetch("/api/signals?active=true&limit=30").then((r) => r.json()),
+      fetch("/api/portfolio/balance").then((r) => r.json()),
+    ])
+      .then(([sigData, balData]) => {
+        setSignals(sigData.signals ?? []);
+        setPortfolioBalance(balData.balanceUsd ?? 1000);
+      })
       .catch(() => setSignals([]))
       .finally(() => setLoading(false));
   }, []);
@@ -458,6 +486,7 @@ export default function SignalsPage() {
   async function openPaperTrade(signal: QuantSignal) {
     setPaperTradeStatus((s) => ({ ...s, [signal.id]: "opening" }));
     const positionSizeFraction = Math.min(signal.kellyFraction ?? 0.05, getKellyCap());
+    const leverage = signal.suggestedLeverage ?? 1.0;
     try {
       const res = await fetch("/api/performance/trades", {
         method: "POST",
@@ -468,6 +497,7 @@ export default function SignalsPage() {
           signal: signal.signal,
           entryPrice: signal.priceAtSignal,
           positionSizeFraction,
+          leverage,
           targetPrice: signal.targetPrice ?? signal.priceAtSignal,
           stopPrice: signal.stopPrice ?? signal.priceAtSignal,
           confidence: signal.confidence,
@@ -475,6 +505,8 @@ export default function SignalsPage() {
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // Refresh balance after opening a trade (margin reserved)
+      fetch("/api/portfolio/balance").then((r) => r.json()).then((d) => setPortfolioBalance(d.balanceUsd ?? portfolioBalance));
       setPaperTradeStatus((s) => ({ ...s, [signal.id]: "done" }));
     } catch {
       setPaperTradeStatus((s) => ({ ...s, [signal.id]: "error" }));
@@ -643,6 +675,7 @@ export default function SignalsPage() {
       {!loading && heroSignal && (
         <HeroCard
           signal={heroSignal}
+          portfolioBalance={portfolioBalance}
           tradeStatus={paperTradeStatus[heroSignal.id] ?? "idle"}
           bStatus={binanceStatus[heroSignal.id] ?? "idle"}
           onPaper={() => openPaperTrade(heroSignal)}
@@ -662,6 +695,7 @@ export default function SignalsPage() {
             <SignalCard
               key={signal.id}
               signal={signal}
+              portfolioBalance={portfolioBalance}
               isExpanded={expanded === signal.id}
               onToggle={() => setExpanded(expanded === signal.id ? null : signal.id)}
               tradeStatus={paperTradeStatus[signal.id] ?? "idle"}

@@ -13,6 +13,9 @@ class PaperTrade(BaseModel):
     signal: str                       # BUY or SELL
     entry_price: float
     position_size_fraction: float     # Kelly fraction of portfolio
+    position_size_usd: Optional[float] = None   # notional USD (balance × kelly)
+    leverage: float = 1.0
+    margin_used: Optional[float] = None         # position_size_usd / leverage
     target_price: float
     stop_price: float
     confidence: float
@@ -20,6 +23,7 @@ class PaperTrade(BaseModel):
     status: str = "open"              # open | closed_profit | closed_loss | closed_stop | closed_target
     exit_price: Optional[float] = None
     pnl_pct: Optional[float] = None
+    pnl_usd: Optional[float] = None
     opened_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     closed_at: Optional[datetime] = None
 
@@ -43,12 +47,18 @@ class PaperTradeTracker:
         stop_price: float,
         confidence: float,
         regime: str,
+        position_size_usd: Optional[float] = None,
+        leverage: float = 1.0,
     ) -> PaperTrade:
+        margin = round(position_size_usd / leverage, 4) if position_size_usd else None
         trade = PaperTrade(
             symbol=symbol,
             signal=signal,
             entry_price=entry_price,
             position_size_fraction=position_size,
+            position_size_usd=position_size_usd,
+            leverage=leverage,
+            margin_used=margin,
             target_price=target_price,
             stop_price=stop_price,
             confidence=confidence,
@@ -85,6 +95,7 @@ class PaperTradeTracker:
 
         trade.exit_price = exit_price
         trade.pnl_pct = round(pnl_pct, 4)
+        trade.pnl_usd = round(pnl_pct / 100 * trade.position_size_usd, 4) if trade.position_size_usd else None
         trade.status = status
         trade.closed_at = datetime.now(timezone.utc)
         return trade
