@@ -85,6 +85,7 @@ export const quantSignals = sqliteTable("quant_signals", {
 export const portfolio = sqliteTable("portfolio", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   balanceUsd: real("balance_usd").notNull().default(1000),
+  initialBalanceUsd: real("initial_balance_usd").notNull().default(1000),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
