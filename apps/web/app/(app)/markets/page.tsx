@@ -432,15 +432,15 @@ export default function SignalsPage() {
 
   async function scanPortfolio() {
     if (!address || !chain) return;
-    const STABLES = new Set(["USDC", "USDT", "DAI", "BUSD", "FRAX"]);
+    const allowedSymbols = new Set(QUICK_SCAN_TOKENS.map((t) => t.symbol));
     try {
       const res = await fetch(`/api/portfolio?address=${address}&chainId=${chain.id}`);
       if (!res.ok) throw new Error("Portfolio fetch failed — check wallet connection");
       const port = await res.json();
       const tokens: PortfolioToken[] = [port.nativeToken, ...(port.tokens ?? [])]
-        .filter((t: PortfolioToken) => t?.symbol && !STABLES.has(t.symbol));
+        .filter((t: PortfolioToken) => t?.symbol && allowedSymbols.has(t.symbol));
       if (!tokens.length) {
-        setScanError("No tokens found in wallet. Try Quick Scan instead.");
+        setScanError("No CMC top-20 tokens found in wallet. Try Quick Scan instead.");
         return;
       }
       await runScan(tokens, "Portfolio scan");

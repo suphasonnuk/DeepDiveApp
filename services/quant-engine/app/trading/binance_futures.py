@@ -14,8 +14,6 @@ SYMBOL_MAP: dict[str, str] = {
     # Wrapped / aliased
     "BTC": "BTCUSDT", "WBTC": "BTCUSDT",
     "ETH": "ETHUSDT", "WETH": "ETHUSDT",
-    "MATIC": "MATICUSDT",  # legacy alias; futures pair still MATICUSDT
-    "POL":   "MATICUSDT",
     # CoinMarketCap top 20 non-stablecoin (April 2026)
     "BNB":  "BNBUSDT",
     "SOL":  "SOLUSDT",

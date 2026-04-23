@@ -14,8 +14,6 @@ BINANCE_SYMBOL_MAP: dict[str, str | None] = {
     # Wrapped / aliased tokens
     "WETH": "ETHUSDT",
     "WBTC": "BTCUSDT",
-    "MATIC": "MATICUSDT",   # legacy alias — POL rebranded from MATIC
-    "POL":   "POLUSDT",
     # CoinMarketCap top 20 non-stablecoin (April 2026)
     "BTC":  "BTCUSDT",
     "ETH":  "ETHUSDT",
