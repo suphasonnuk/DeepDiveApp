@@ -22,19 +22,21 @@ export function TopHeader() {
   const walletBtnRef = useRef<HTMLButtonElement>(null);
   const connectBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or tap (mousedown misses iOS tap on non-interactive elements)
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
+    function handleOutside(e: MouseEvent | TouchEvent) {
+      const target = (e as TouchEvent).touches?.[0]?.target ?? (e as MouseEvent).target;
+      if (dropdownRef.current && !dropdownRef.current.contains(target as Node)) {
         setShowDropdown(false);
         setShowConnectors(false);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
   }, []);
 
   // Focus first menu item when connected dropdown opens

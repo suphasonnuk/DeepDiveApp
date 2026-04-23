@@ -27,6 +27,12 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "DeepDive",
   description: "Personal crypto portfolio management",
+  // iOS: launches in full-screen when added to home screen, hides Safari chrome
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "DeepDive",
+  },
 };
 
 export const viewport: Viewport = {
