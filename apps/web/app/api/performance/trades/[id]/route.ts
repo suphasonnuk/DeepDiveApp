@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@deepdive/db";
-import { paperTrades } from "@deepdive/db";
-import { eq } from "@deepdive/db";
+import { db, portfolio, paperTrades, eq, sql } from "@deepdive/db";
 
 export async function PUT(
   request: NextRequest,
@@ -37,6 +35,10 @@ export async function PUT(
       ? ((exitPrice - existing.entryPrice) / existing.entryPrice) * 100
       : ((existing.entryPrice - exitPrice) / existing.entryPrice) * 100;
 
+  const pnlUsd = existing.positionSizeUsd != null
+    ? Math.round((pnlPct / 100) * existing.positionSizeUsd * 10000) / 10000
+    : null;
+
   let status: string;
   if (existing.signal === "BUY") {
     if (exitPrice >= existing.targetPrice) status = "closed_target";
@@ -53,11 +55,26 @@ export async function PUT(
     .set({
       exitPrice,
       pnlPct: Math.round(pnlPct * 10000) / 10000,
+      pnlUsd,
       status,
       closedAt: new Date(),
     })
     .where(eq(paperTrades.id, tradeId))
     .returning();
+
+  // Update portfolio balance with realized P&L
+  if (pnlUsd != null) {
+    const rows = await db.select().from(portfolio).limit(1);
+    if (rows.length > 0) {
+      await db
+        .update(portfolio)
+        .set({
+          balanceUsd: Math.round((rows[0].balanceUsd + pnlUsd) * 100) / 100,
+          updatedAt: new Date(),
+        })
+        .where(eq(portfolio.id, rows[0].id));
+    }
+  }
 
   return NextResponse.json(updated);
 }

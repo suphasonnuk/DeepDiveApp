@@ -17,6 +17,55 @@ REGIME_WEIGHTS: dict[str, dict[str, float]] = {
     "SIDEWAYS": {"kalman": 0.20, "ou": 0.80},
 }
 
+_STANDARD_LEVERAGES = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
+
+
+def _snap_leverage(raw: float) -> float:
+    """Snap a raw leverage value to the nearest standard tier."""
+    return min(_STANDARD_LEVERAGES, key=lambda t: abs(t - raw))
+
+
+def suggest_leverage(
+    confidence: float,
+    regime: str,
+    kelly_fraction: float,
+    sigma_eq: float,
+    stop_pct: float,
+    win_probability: float,
+) -> float:
+    """
+    Volatility-bounded leverage via a five-factor risk model.
+
+    Core constraint: leverage must stay below the level where the stop loss
+    triggers before exchange liquidation (60% safety buffer on liquidation distance).
+    All other factors scale within that ceiling.
+
+    Returns one of: 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0
+    """
+    # 1. Hard ceiling: stop must trigger before liquidation.
+    #    Liquidation at price move = 1/L. Stop at stop_pct.
+    #    Require stop_pct ≤ 0.60 / L  →  L ≤ 0.60 / stop_pct.
+    l_max = 0.60 / max(stop_pct, 0.005)
+
+    # 2. Volatility scalar: normalize to 3% baseline (median top-10 crypto vol).
+    #    High sigma_eq → process is noisy → more likely stopped before thesis plays out.
+    vol_scale = min(0.03 / max(sigma_eq, 0.005), 1.5)
+
+    # 3. Edge: remap win_probability [0.5, 1.0] → [0.0, 1.0].
+    #    A coin-flip signal (wp=0.5) deserves no leverage; certainty gets full ceiling.
+    edge = (win_probability - 0.5) * 2.0
+
+    # 4. Regime modifier: SIDEWAYS has high whipsaw risk (OU oscillations without
+    #    a confirmed trend); BEAR has directional uncertainty; BULL is Kalman-confirmed.
+    regime_mod = {"BULL": 1.00, "BEAR": 0.70, "SIDEWAYS": 0.45}.get(regime, 0.70)
+
+    # 5. Kelly dampener: large kelly_fraction already means large notional exposure.
+    #    Prevent double-stacking risk: kelly=0.25 → 50%, kelly≈0 → ~100%.
+    kelly_damp = 1.0 - 0.5 * min(kelly_fraction / 0.25, 1.0)
+
+    raw = l_max * vol_scale * edge * regime_mod * kelly_damp
+    return _snap_leverage(raw)
+
 _SIGNAL_SCORE = {"BUY": 1, "HOLD": 0, "SELL": -1}
 _BUY_THRESHOLD = 0.10
 _SELL_THRESHOLD = -0.10
@@ -111,16 +160,20 @@ class SignalGenerator:
             target_price = current_price
             stop_price = current_price
 
-        # --- 6. Kelly position size ---
+        # --- 6. Kelly position size + leverage ---
         kelly_result = self.kelly.compute_from_signal(win_probability, target_pct, stop_pct)
 
-        # --- 7. Delta (spot holding delta = 1.0; used for hedge sizing) ---
+        # --- 7. Delta + leverage ---
         # For a BUY signal: delta = +1 (long exposure)
         # For a SELL signal: delta = -1 (reduce or short exposure)
         # To stay delta-neutral: hedge = position_fraction * |delta|
         directional_delta = 1.0 if final_signal == "BUY" else (-1.0 if final_signal == "SELL" else 0.0)
         position_fraction = kelly_result["position_size_fraction"]
         portfolio_delta_contribution = directional_delta * position_fraction
+        leverage = suggest_leverage(
+            combined_confidence, regime, position_fraction,
+            sigma_eq=ou_sigma_eq, stop_pct=stop_pct, win_probability=win_probability,
+        )
 
         return {
             "symbol": symbol,
@@ -145,6 +198,7 @@ class SignalGenerator:
             },
             "position": {
                 "kelly_fraction": position_fraction,
+                "suggested_leverage": leverage,
                 "full_kelly": kelly_result["full_kelly"],
                 "note": kelly_result["note"],
                 "delta": directional_delta,

@@ -9,14 +9,19 @@ interface PaperTrade {
   entryPrice: number;
   exitPrice: number | null;
   positionSizeFraction: number;
+  positionSizeUsd: number | null;
+  leverage: number;
+  marginUsed: number | null;
   targetPrice: number;
   stopPrice: number;
   confidence: number;
   regime: string;
   status: string;
   pnlPct: number | null;
+  pnlUsd: number | null;
   currentPrice: number | null;
   unrealizedPnlPct: number | null;
+  unrealizedPnlUsd: number | null;
   openedAt: string;
   closedAt: string | null;
 }
@@ -50,6 +55,9 @@ interface PerformanceMetrics {
   maxDrawdownPct: number;
   profitFactor: number | null;
   equityCurve: number[];
+  realizedPnlUsd: number;
+  currentBalanceUsd: number;
+  availableUsd: number;
 }
 
 const STATUS_STYLE: Record<string, { label: string; color: string }> = {
@@ -153,6 +161,27 @@ export default function PerformancePage() {
   return (
     <div className="space-y-4">
       <h1 className="font-display text-2xl font-bold tracking-tight">Performance</h1>
+
+      {/* Portfolio balance banner */}
+      {metrics && (
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-text-muted">Portfolio Balance</p>
+              <p className="font-display mt-0.5 text-2xl font-bold tabular-nums">
+                ${metrics.currentBalanceUsd.toFixed(2)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-text-muted">Available</p>
+              <p className="font-medium">${metrics.availableUsd.toFixed(2)}</p>
+              <p className={`text-xs font-medium ${metrics.realizedPnlUsd >= 0 ? "text-success" : "text-danger"}`}>
+                {metrics.realizedPnlUsd >= 0 ? "+" : ""}${metrics.realizedPnlUsd.toFixed(2)} realized
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Equity curve — primary visual anchor; proof the models generate alpha */}
       {metrics && metrics.equityCurve.length > 1 && (() => {
@@ -419,8 +448,13 @@ export default function PerformancePage() {
                   )}
                   <p className="text-xs text-text-muted">
                     Kelly {(trade.positionSizeFraction * 100).toFixed(1)}%
+                    {trade.positionSizeUsd != null && ` · $${trade.positionSizeUsd.toFixed(2)}`}
+                    {trade.leverage > 1 && <span className="text-accent"> {trade.leverage}×</span>}
                     {" · "}{Math.round(trade.confidence * 100)}% conf
                   </p>
+                  {trade.marginUsed != null && trade.leverage > 1 && (
+                    <p className="text-xs text-text-muted">Margin ${trade.marginUsed.toFixed(2)}</p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className={`text-sm font-semibold ${statusStyle.color}`}>
@@ -429,11 +463,21 @@ export default function PerformancePage() {
                   {trade.pnlPct != null && (
                     <p className={`text-xs font-medium ${trade.pnlPct >= 0 ? "text-success" : "text-danger"}`}>
                       {trade.pnlPct > 0 ? "+" : ""}{trade.pnlPct.toFixed(2)}%
+                      {trade.pnlUsd != null && (
+                        <span className="ml-1">
+                          ({trade.pnlUsd >= 0 ? "+" : ""}${Math.abs(trade.pnlUsd).toFixed(2)})
+                        </span>
+                      )}
                     </p>
                   )}
                   {trade.status === "open" && trade.unrealizedPnlPct != null && (
                     <p className={`text-xs font-medium ${trade.unrealizedPnlPct >= 0 ? "text-success" : "text-danger"}`}>
                       {trade.unrealizedPnlPct > 0 ? "+" : ""}{trade.unrealizedPnlPct.toFixed(2)}%
+                      {trade.unrealizedPnlUsd != null && (
+                        <span className="ml-1">
+                          ({trade.unrealizedPnlUsd >= 0 ? "+" : ""}${Math.abs(trade.unrealizedPnlUsd).toFixed(2)})
+                        </span>
+                      )}
                       <span className="ml-1 text-text-muted">(live)</span>
                     </p>
                   )}
@@ -458,9 +502,15 @@ export default function PerformancePage() {
                         >
                           <p className="text-xs text-text-muted">Target hit</p>
                           <p className="text-sm font-semibold text-success">${trade.targetPrice.toPrecision(5)}</p>
-                          <p className="text-xs text-success">
-                            +{(((trade.targetPrice - trade.entryPrice) / trade.entryPrice) * 100).toFixed(2)}%
-                          </p>
+                          {(() => {
+                            const pct = ((trade.targetPrice - trade.entryPrice) / trade.entryPrice) * 100;
+                            const usd = trade.positionSizeUsd != null ? (pct / 100) * trade.positionSizeUsd : null;
+                            return (
+                              <p className="text-xs text-success">
+                                +{pct.toFixed(2)}%{usd != null && ` (+$${usd.toFixed(2)})`}
+                              </p>
+                            );
+                          })()}
                         </button>
                         <button
                           onClick={() => closeTrade(trade.id, trade.stopPrice)}
@@ -468,9 +518,15 @@ export default function PerformancePage() {
                         >
                           <p className="text-xs text-text-muted">Stop hit</p>
                           <p className="text-sm font-semibold text-danger">${trade.stopPrice.toPrecision(5)}</p>
-                          <p className="text-xs text-danger">
-                            {(((trade.stopPrice - trade.entryPrice) / trade.entryPrice) * 100).toFixed(2)}%
-                          </p>
+                          {(() => {
+                            const pct = ((trade.stopPrice - trade.entryPrice) / trade.entryPrice) * 100;
+                            const usd = trade.positionSizeUsd != null ? (pct / 100) * trade.positionSizeUsd : null;
+                            return (
+                              <p className="text-xs text-danger">
+                                {pct.toFixed(2)}%{usd != null && ` ($${usd.toFixed(2)})`}
+                              </p>
+                            );
+                          })()}
                         </button>
                       </div>
                       {/* Custom exit — for mid-trade discretionary closes */}
