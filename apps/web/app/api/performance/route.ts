@@ -8,13 +8,19 @@ export async function GET() {
   ]);
 
   const balanceUsd = portRows[0]?.balanceUsd ?? 1000;
+  const initialBalanceUsd = portRows[0]?.initialBalanceUsd ?? 1000;
+  const totalReturnPct = Math.round(((balanceUsd - initialBalanceUsd) / initialBalanceUsd) * 10000) / 100;
 
   if (!trades.length) {
     return NextResponse.json({
       totalTrades: 0, openTrades: 0,
       winRate: 0, avgPnlPct: 0, sharpeRatio: 0, maxDrawdownPct: 0,
       profitFactor: 0, equityCurve: [1],
-      realizedPnlUsd: 0, currentBalanceUsd: balanceUsd,
+      realizedPnlUsd: 0,
+      currentBalanceUsd: balanceUsd,
+      initialBalanceUsd,
+      totalReturnPct,
+      availableUsd: balanceUsd,
     });
   }
 
@@ -31,7 +37,9 @@ export async function GET() {
       profitFactor: 0, equityCurve: [1],
       realizedPnlUsd: 0,
       currentBalanceUsd: balanceUsd,
-      availableUsd: Math.max(balanceUsd - reservedMargin, 0),
+      initialBalanceUsd,
+      totalReturnPct,
+      availableUsd: Math.round(Math.max(balanceUsd - reservedMargin, 0) * 100) / 100,
     });
   }
 
@@ -77,6 +85,8 @@ export async function GET() {
     },
     realizedPnlUsd: Math.round(realizedPnlUsd * 100) / 100,
     currentBalanceUsd: balanceUsd,
+    initialBalanceUsd,
+    totalReturnPct,
     availableUsd: Math.round(Math.max(balanceUsd - reservedMargin, 0) * 100) / 100,
   });
 }

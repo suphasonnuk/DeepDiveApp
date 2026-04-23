@@ -1,5 +1,6 @@
 import { WalletConnector } from "./components/WalletConnector";
 import { QuantSettings } from "./components/QuantSettings";
+import { BalanceSettings } from "./components/BalanceSettings";
 
 const SECURITY_ITEMS = [
   { label: "Session",    value: "Passphrase JWT · 1 hour expiry" },
@@ -16,6 +17,12 @@ export default function SettingsPage() {
       <section className="space-y-4">
         <h2 className="text-xs uppercase tracking-widest text-text-muted">Wallet</h2>
         <WalletConnector />
+      </section>
+
+      {/* Paper trading balance */}
+      <section className="space-y-4">
+        <h2 className="text-xs uppercase tracking-widest text-text-muted">Paper Trading</h2>
+        <BalanceSettings />
       </section>
 
       {/* Signal engine */}

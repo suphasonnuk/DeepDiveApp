@@ -57,6 +57,8 @@ interface PerformanceMetrics {
   equityCurve: number[];
   realizedPnlUsd: number;
   currentBalanceUsd: number;
+  initialBalanceUsd: number;
+  totalReturnPct: number;
   availableUsd: number;
 }
 
@@ -163,25 +165,66 @@ export default function PerformancePage() {
       <h1 className="font-display text-2xl font-bold tracking-tight">Performance</h1>
 
       {/* Portfolio balance banner */}
-      {metrics && (
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-text-muted">Portfolio Balance</p>
-              <p className="font-display mt-0.5 text-2xl font-bold tabular-nums">
-                ${metrics.currentBalanceUsd.toFixed(2)}
-              </p>
+      {metrics && (() => {
+        const openTrades = trades.filter((t) => t.status === "open");
+        const totalUnrealizedPnlUsd = openTrades.reduce((sum, t) => sum + (t.unrealizedPnlUsd ?? 0), 0);
+        const hasUnrealized = openTrades.some((t) => t.unrealizedPnlUsd != null);
+        const isUp = metrics.totalReturnPct >= 0;
+
+        return (
+          <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+            {/* Balance + total return */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-widest text-text-muted">Portfolio Balance</p>
+                <p className="font-display mt-0.5 text-2xl font-bold tabular-nums">
+                  ${metrics.currentBalanceUsd.toFixed(2)}
+                </p>
+                <p className="mt-0.5 text-xs text-text-muted">
+                  Started with{" "}
+                  <span className="font-mono text-text-secondary">
+                    ${metrics.initialBalanceUsd.toFixed(2)}
+                  </span>
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className={`font-display text-xl font-bold tabular-nums ${isUp ? "text-success" : "text-danger"}`}>
+                  {isUp ? "+" : ""}{metrics.totalReturnPct.toFixed(2)}%
+                </p>
+                <p className="text-xs text-text-muted">total return</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-text-muted">Available</p>
-              <p className="font-medium">${metrics.availableUsd.toFixed(2)}</p>
-              <p className={`text-xs font-medium ${metrics.realizedPnlUsd >= 0 ? "text-success" : "text-danger"}`}>
-                {metrics.realizedPnlUsd >= 0 ? "+" : ""}${metrics.realizedPnlUsd.toFixed(2)} realized
-              </p>
+
+            {/* P&L breakdown: Realized · Unrealized · Available */}
+            <div className="grid grid-cols-3 gap-2 border-t border-border pt-3">
+              <div>
+                <p className="text-xs text-text-muted">Realized</p>
+                <p className={`mt-0.5 font-mono text-sm font-semibold ${metrics.realizedPnlUsd >= 0 ? "text-success" : "text-danger"}`}>
+                  {metrics.realizedPnlUsd >= 0 ? "+" : ""}${Math.abs(metrics.realizedPnlUsd).toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-text-muted">Unrealized</p>
+                <p className={`mt-0.5 font-mono text-sm font-semibold ${
+                  !hasUnrealized
+                    ? "text-text-muted"
+                    : totalUnrealizedPnlUsd >= 0 ? "text-success" : "text-danger"
+                }`}>
+                  {hasUnrealized
+                    ? `${totalUnrealizedPnlUsd >= 0 ? "+" : ""}$${Math.abs(totalUnrealizedPnlUsd).toFixed(2)}`
+                    : "--"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-text-muted">Available</p>
+                <p className="mt-0.5 font-mono text-sm font-semibold">
+                  ${metrics.availableUsd.toFixed(2)}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Equity curve — primary visual anchor; proof the models generate alpha */}
       {metrics && metrics.equityCurve.length > 1 && (() => {
