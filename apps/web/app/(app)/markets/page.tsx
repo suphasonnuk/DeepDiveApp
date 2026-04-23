@@ -550,13 +550,13 @@ export default function SignalsPage() {
   return (
     <div className="space-y-4">
       {/* Control strip */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-bold tracking-tight">Signals</h1>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <button
             onClick={quickScan}
             disabled={scanning}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-surface disabled:opacity-40"
+            className="min-h-[40px] rounded-xl border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-surface disabled:opacity-40"
           >
             {scanning ? "Scanning…" : "Quick Scan"}
           </button>
@@ -564,7 +564,7 @@ export default function SignalsPage() {
             onClick={scanPortfolio}
             disabled={scanning || !address}
             title={!address ? "Connect wallet first" : undefined}
-            className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+            className="min-h-[40px] rounded-xl bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
             {scanning ? "Scanning…" : "Scan Portfolio"}
           </button>
@@ -593,7 +593,7 @@ export default function SignalsPage() {
 
       {/* Filter pills + sort toggle */}
       {signals.length > 0 && (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {(["ALL", "BUY", "SELL", "HOLD"] as const).map((f) => {
             const isActive = filter === f;
             const activeStyle =
@@ -605,7 +605,7 @@ export default function SignalsPage() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`min-h-[36px] rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                   isActive ? activeStyle : "text-text-muted hover:text-text-secondary"
                 }`}
               >
@@ -615,7 +615,7 @@ export default function SignalsPage() {
           })}
           <button
             onClick={() => setSortBy((s) => (s === "confidence" ? "recency" : "confidence"))}
-            className="ml-auto text-xs text-text-muted transition-colors hover:text-text-secondary"
+            className="ml-auto flex min-h-[36px] items-center px-2 text-xs text-text-muted transition-colors hover:text-text-secondary"
           >
             ↕ {sortBy === "confidence" ? "Confidence" : "Recency"}
           </button>

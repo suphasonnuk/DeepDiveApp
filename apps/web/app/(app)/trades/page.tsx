@@ -307,17 +307,17 @@ export default function PerformancePage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors capitalize ${
+            className={`flex-1 rounded-lg px-2 py-2.5 text-sm font-medium transition-colors ${
               tab === t
                 ? "bg-accent text-white"
                 : "border border-border bg-surface text-text-secondary hover:border-accent/50"
             }`}
           >
             {t === "positions"
-              ? `Binance (${positions.filter(p => p.status === "open").length})`
+              ? `Binance (${positions.filter((p) => p.status === "open").length})`
               : t === "open"
-              ? `Paper Open (${openTrades.length})`
-              : `Paper Closed (${closedTrades.length})`}
+              ? `Open (${openTrades.length})`
+              : `Closed (${closedTrades.length})`}
           </button>
         ))}
       </div>
@@ -537,12 +537,13 @@ export default function PerformancePage() {
                         <input
                           id={`exit-price-${trade.id}`}
                           type="number"
+                          inputMode="decimal"
                           min="0.000001"
                           step="any"
                           placeholder="Custom exit price"
                           value={closePrice}
                           onChange={(e) => { setClosePrice(e.target.value); setCloseError(null); }}
-                          className="flex-1 rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
+                          className="flex-1 rounded-lg border border-border bg-surface-elevated px-3 py-2 focus:border-accent focus:outline-none"
                         />
                         <button
                           disabled={!closePrice || parseFloat(closePrice) <= 0}

@@ -83,9 +83,18 @@ export default function DashboardPage() {
 
   if (!isConnected) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-2">
-        <p className="text-[11px] uppercase tracking-[0.15em] text-text-muted">No wallet connected</p>
-        <p className="text-sm text-text-secondary">Connect from the top-right to view your portfolio</p>
+      <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-elevated">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted" aria-hidden="true">
+            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+          </svg>
+        </div>
+        <div>
+          <p className="font-medium text-text-secondary">No wallet connected</p>
+          <p className="mt-1 text-sm text-text-muted">Tap "Connect Wallet" in the top-right to view your portfolio</p>
+        </div>
       </div>
     );
   }
@@ -125,10 +134,12 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* -m* offsets absorb padding so it doesn't affect layout spacing */}
           <button
             onClick={fetchPortfolio}
             disabled={loading}
-            className="mt-1 font-mono text-[11px] uppercase tracking-[0.12em] text-text-muted transition-colors hover:text-text-secondary disabled:opacity-30"
+            aria-label="Refresh portfolio"
+            className="-mr-2 -mt-1 flex min-h-[44px] min-w-[44px] items-center justify-center font-mono text-[11px] uppercase tracking-[0.12em] text-text-muted transition-colors hover:text-text-secondary disabled:opacity-30"
           >
             {loading ? "···" : "↻ Refresh"}
           </button>
