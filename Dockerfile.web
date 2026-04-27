@@ -1,42 +1,29 @@
-# ─── Stage 1: Install dependencies ───────────────────────────────────────────
-FROM node:20-slim AS deps
-
-# Enable pnpm via corepack
-RUN corepack enable
-
-WORKDIR /app
-
-# Copy workspace manifests only — maximises layer cache
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY apps/web/package.json                   ./apps/web/
-COPY packages/crypto/package.json            ./packages/crypto/
-COPY packages/chains/package.json            ./packages/chains/
-COPY packages/db/package.json                ./packages/db/
-COPY packages/tsconfig/package.json          ./packages/tsconfig/
-
-RUN pnpm install --frozen-lockfile
-
-
-# ─── Stage 2: Build ───────────────────────────────────────────────────────────
+# ─── Stage 1: Install + Build ─────────────────────────────────────────────────
+# Must use debian-based (slim) not alpine — @libsql native binary requires glibc.
 FROM node:20-slim AS builder
 
 RUN corepack enable
+
 WORKDIR /app
 
-# Bring in installed node_modules from deps stage
-COPY --from=deps /app/node_modules          ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+# Copy manifests first so pnpm can install external deps and create workspace
+# symlinks (node_modules/@deepdive/* → packages/*) while only package.json exists.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
+COPY packages/tsconfig/package.json          ./packages/tsconfig/
+COPY packages/crypto/package.json            ./packages/crypto/
+COPY packages/chains/package.json            ./packages/chains/
+COPY packages/db/package.json                ./packages/db/
+COPY apps/web/package.json                   ./apps/web/
 
-# Copy full source (node_modules and .next excluded via .dockerignore)
-COPY . .
-
-# pnpm dereferences workspace symlinks when Docker copies between stages, leaving
-# node_modules/@deepdive/* as empty stubs (package.json only, no src/).
-# Re-running install recreates the symlinks now that packages/*/src/ exists.
 RUN pnpm install --frozen-lockfile
 
+# Copy workspace source AFTER install. pnpm workspace symlinks are live filesystem
+# references — once packages/*/src/ exists here, node_modules/@deepdive/* sees it
+# immediately through the symlink chain. No COPY --from needed.
+COPY packages/ ./packages/
+COPY apps/web/ ./apps/web/
+
 # NEXT_PUBLIC_* vars are baked into the JS bundle at build time.
-# Pass them as build args: --build-arg NEXT_PUBLIC_FOO=bar
 ARG NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=""
 ARG NEXT_PUBLIC_RPC_ETHEREUM=""
 ARG NEXT_PUBLIC_RPC_ARBITRUM=""
@@ -55,8 +42,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @deepdive/web build
 
 
-# ─── Stage 3: Production runner ───────────────────────────────────────────────
-# Must use debian-based (slim) not alpine — @libsql native binary requires glibc.
+# ─── Stage 2: Production runner ───────────────────────────────────────────────
 FROM node:20-slim AS runner
 
 WORKDIR /app
