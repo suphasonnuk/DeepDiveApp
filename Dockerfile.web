@@ -30,6 +30,11 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 # Copy full source (node_modules and .next excluded via .dockerignore)
 COPY . .
 
+# pnpm dereferences workspace symlinks when Docker copies between stages, leaving
+# node_modules/@deepdive/* as empty stubs (package.json only, no src/).
+# Re-running install recreates the symlinks now that packages/*/src/ exists.
+RUN pnpm install --frozen-lockfile
+
 # NEXT_PUBLIC_* vars are baked into the JS bundle at build time.
 # Pass them as build args: --build-arg NEXT_PUBLIC_FOO=bar
 ARG NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=""
