@@ -1,10 +1,15 @@
 import os
+import math
+import logging
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 from dotenv import load_dotenv
+
+logger = logging.getLogger("quant-engine")
 
 from app.data.fetchers import fetch_prices, BINANCE_SYMBOL_MAP, COINGECKO_ONLY_MAP
 from app.data.funding import avg_funding_rate
@@ -46,6 +51,37 @@ kelly_calibrator = KellyCalibrator()
 signal_generator = SignalGenerator(calibrator=kelly_calibrator, cost_model=cost_model)
 paper_tracker = PaperTradeTracker()
 portfolio_risk = PortfolioRiskManager()
+
+
+def _sanitize(obj):
+    """Convert numpy types and NaN/Inf to JSON-safe Python natives."""
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        v = float(obj)
+        if math.isnan(v) or math.isinf(v):
+            return None
+        return v
+    if isinstance(obj, np.ndarray):
+        return _sanitize(obj.tolist())
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    return obj
+
+
+@app.exception_handler(Exception)
+async def _unhandled_error(request: Request, exc: Exception):
+    logger.exception("Unhandled error: %s", exc)
+    return JSONResponse(
+        status_code=500,
+        content={"error": str(exc)},
+    )
 
 
 # ── Request / Response models ──────────────────────────────────────────────
@@ -139,7 +175,7 @@ async def generate_signal(req: SignalRequest):
         prices = data["prices"]
         current_price = data["current_price"]
 
-    return signal_generator.generate(req.symbol, prices, float(current_price))
+    return _sanitize(signal_generator.generate(req.symbol, prices, float(current_price)))
 
 
 @app.post("/api/v1/signals/batch")
@@ -174,22 +210,25 @@ async def generate_signals_batch(req: BatchSignalRequest):
         except Exception as e:
             results.append({"symbol": symbol, "error": str(e), "signal": "HOLD"})
 
-    if len(proposed_positions) > 1 and len(price_dict) >= 2:
-        adjusted = portfolio_risk.apply_constraints(proposed_positions, price_dict)
-        for sig in results:
-            sym = sig.get("symbol")
-            if sym in adjusted and "position" in sig:
-                original = sig["position"]["kelly_fraction"]
-                new_frac = round(adjusted[sym], 4)
-                if new_frac < original:
-                    sig["position"]["kelly_fraction"] = new_frac
-                    sig["position"]["note"] = (
-                        f"Half-Kelly: allocate {new_frac * 100:.1f}% "
-                        f"(reduced from {original * 100:.1f}% by portfolio risk constraints)"
-                    )
-                    sig["position"]["portfolio_constrained"] = True
+    try:
+        if len(proposed_positions) > 1 and len(price_dict) >= 2:
+            adjusted = portfolio_risk.apply_constraints(proposed_positions, price_dict)
+            for sig in results:
+                sym = sig.get("symbol")
+                if sym in adjusted and "position" in sig:
+                    original = sig["position"]["kelly_fraction"]
+                    new_frac = round(adjusted[sym], 4)
+                    if new_frac < original:
+                        sig["position"]["kelly_fraction"] = new_frac
+                        sig["position"]["note"] = (
+                            f"Half-Kelly: allocate {new_frac * 100:.1f}% "
+                            f"(reduced from {original * 100:.1f}% by portfolio risk constraints)"
+                        )
+                        sig["position"]["portfolio_constrained"] = True
+    except Exception as e:
+        logger.warning("Portfolio risk constraints skipped: %s", e)
 
-    return results
+    return _sanitize(results)
 
 
 # ── Paper trading endpoints ───────────────────────────────────────────────

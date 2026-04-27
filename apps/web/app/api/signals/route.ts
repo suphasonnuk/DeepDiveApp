@@ -63,10 +63,16 @@ export async function POST(request: NextRequest) {
   }
 
   if (!quantRes.ok) {
-    const detail = await quantRes.text().catch(() => "");
     const status = quantRes.status;
+    let reason = "";
+    try {
+      const body = await quantRes.json();
+      reason = body?.error ?? body?.detail ?? JSON.stringify(body);
+    } catch {
+      reason = await quantRes.text().catch(() => "");
+    }
     return NextResponse.json(
-      { error: `Quant engine returned ${status}${detail ? `: ${detail.slice(0, 200)}` : ""}` },
+      { error: `Quant engine error (${status}): ${reason.slice(0, 300)}` },
       { status: 502 },
     );
   }
