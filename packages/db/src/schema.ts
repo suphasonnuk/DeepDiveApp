@@ -21,20 +21,6 @@ export const tokens = sqliteTable("tokens", {
 }));
 
 /**
- * Token Prices — Historical price snapshots (Tier 1 cloud data)
- */
-export const tokenPrices = sqliteTable("token_prices", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  tokenId: integer("token_id").notNull().references(() => tokens.id),
-  priceUsd: real("price_usd").notNull(),
-  volume24h: real("volume_24h"),
-  marketCap: real("market_cap"),
-  timestamp: integer("timestamp", { mode: "timestamp" }).notNull(),
-}, (table) => ({
-  tokenTimestampIdx: index("idx_token_prices_token_timestamp").on(table.tokenId, table.timestamp),
-}));
-
-/**
  * Quant Signals — Mathematical signals from Kalman + OU + HMM + Kelly pipeline
  */
 export const quantSignals = sqliteTable("quant_signals", {
@@ -169,8 +155,6 @@ export const autoPositions = sqliteTable("auto_positions", {
 // TypeScript types
 export type Token = typeof tokens.$inferSelect;
 export type NewToken = typeof tokens.$inferInsert;
-export type TokenPrice = typeof tokenPrices.$inferSelect;
-export type NewTokenPrice = typeof tokenPrices.$inferInsert;
 export type QuantSignal = typeof quantSignals.$inferSelect;
 export type NewQuantSignal = typeof quantSignals.$inferInsert;
 export type PaperTrade = typeof paperTrades.$inferSelect;

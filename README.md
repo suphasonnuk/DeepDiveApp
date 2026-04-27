@@ -7,9 +7,17 @@ See [DEPLOY.md](DEPLOY.md) for the full step-by-step deployment guide.
 ## What It Does
 
 - **Dashboard** — Connected wallet token balances + LP positions + total USD value
-- **Signals** — Quant buy/sell/hold signals with confidence, R/R ratio, Kelly fraction, delta
+- **Signals** — Quant buy/sell/hold signals for CMC top-30 tokens (Binance spot pairs) with confidence, R/R ratio, Kelly fraction, delta
 - **Performance** — Paper trade history, equity curve, Sharpe ratio, win rate, max drawdown
 - **Settings** — Wallet connect, model info, security details
+
+## Signal Universe
+
+Signals cover the **CoinMarketCap top-30 non-stablecoin tokens** (filtered to those with Binance USDT spot pairs for reliable OHLCV data):
+
+BTC, ETH, XRP, BNB, SOL, TRX, DOGE, BCH, ADA, LINK, XLM, ZEC, LTC, AVAX, HBAR, SUI, SHIB, TON, TAO, WLFI, UNI, DOT, SKY
+
+Excluded (no Binance spot pair): HYPE, LEO, XMR, CC, M, CRO, MNT.
 
 ## Quant Models
 
@@ -48,6 +56,8 @@ NEXT_PUBLIC_RPC_ETHEREUM=https://your-endpoint.quiknode.pro/xxx/
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_id
 ```
 
+> **JWT_SECRET is mandatory.** Generate with: `openssl rand -hex 32`. The app will refuse to start without it.
+
 **For database push only** — create `packages/db/.env`:
 ```
 TURSO_DATABASE_URL=libsql://your-db.turso.io
@@ -63,7 +73,7 @@ cd packages/db
 pnpm db:push
 ```
 
-You should see these tables created: `tokens`, `token_prices`, `quant_signals`, `paper_trades`
+You should see these tables created: `tokens`, `quant_signals`, `paper_trades`, `auto_positions`, `portfolio`
 
 ### 4. Start Dev Server
 
@@ -93,15 +103,16 @@ apps/web/              → Next.js 15 (App Router)
   │   ├── (auth)/login/       → Passphrase login
   │   ├── (app)/              → Authenticated shell
   │   │   ├── dashboard/      → Portfolio: tokens + LP positions
-  │   │   ├── markets/        → Quant signals
+  │   │   ├── markets/        → Quant signals (CMC top-30)
   │   │   ├── trades/         → Paper trade history + performance
   │   │   └── settings/       → Wallet connect + info
   │   ├── api/
   │   │   ├── auth/           → Login/logout (JWT)
   │   │   ├── portfolio/      → Wallet balances via QuickNode + Covalent
   │   │   ├── signals/        → Signal list + portfolio scan
+  │   │   ├── positions/      → Binance Futures Testnet positions
   │   │   └── performance/    → Metrics + paper trades
-  │   └── middleware.ts       → JWT auth gate
+  │   └── middleware.ts       → JWT auth gate + security headers
 
 packages/
   ├── crypto/          → Web Crypto API encryption vault (AES-256-GCM)
@@ -112,13 +123,16 @@ services/quant-engine/ → Python FastAPI
   ├── app/models/      → kalman.py, ou_process.py, hmm_regime.py, kelly.py
   ├── app/signals/     → generator.py (orchestrates all models)
   ├── app/data/        → fetchers.py (Binance primary, CoinGecko fallback)
+  ├── app/backtest/    → engine.py, walk_forward.py, costs.py
+  ├── app/calibration/ → kelly_calibrator.py, param_optimizer.py
+  ├── app/portfolio/   → risk.py (portfolio-level risk management)
   └── app/performance/ → tracker.py (paper trades + metrics)
 ```
 
 ## Data Flow
 
 1. **Wallet connected** → QuickNode RPC fetches native balance; Covalent fetches ERC-20s
-2. **Scan Portfolio** → tokens sent to quant engine batch endpoint
+2. **Scan Portfolio** → tokens filtered to CMC top-30, sent to quant engine batch endpoint
 3. **Quant engine** → Kalman + OU + HMM + Kelly → regime-weighted signal per token
 4. **Signal persisted** → stored in `quant_signals` table in Turso
 5. **Open Paper Trade** → entry recorded in `paper_trades` table
@@ -134,14 +148,18 @@ services/quant-engine/ → Python FastAPI
 | Blockchain data | QuickNode RPC + Covalent API |
 | Price data | Binance public API + CoinGecko (fallback) |
 | Quant engine | Python FastAPI + numpy + scipy + hmmlearn |
-| Hosting | Vercel (web) or GCP Cloud Run |
+| Hosting | GCP Cloud Run (both services) |
 
 ## Security
 
-- **Passphrase auth** — PBKDF2 (600k iterations) derives AES-256-GCM encryption key
+- **JWT_SECRET is mandatory** — app throws at startup if missing (no insecure defaults)
+- **Security headers** — HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy
+- **Passphrase auth** — PBKDF2 (600k iterations) derives AES-256-GCM encryption key client-side
 - **Local encryption** — All sensitive data encrypted in browser IndexedDB via `@deepdive/crypto`
 - **Wallet signing** — Private keys never leave your wallet device
 - **Server isolation** — Cloud never stores which tokens you hold (Tier 2 data stays local)
+- **Cookie security** — httpOnly, secure (production), sameSite=strict
+- **No information leakage** — `poweredByHeader: false`, no error details in API responses
 
 ## Data Classification
 
@@ -151,7 +169,7 @@ services/quant-engine/ → Python FastAPI
 
 ## Deployment
 
-See [DEPLOY.md](DEPLOY.md) for the full Windows/PowerShell guide including GCP Cloud Run setup.
+See [DEPLOY.md](DEPLOY.md) for the full guide including GCP Cloud Run setup, secret management, and troubleshooting.
 
 ## License
 

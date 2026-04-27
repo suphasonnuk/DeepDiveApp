@@ -1,21 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "dev-jwt-secret-change-in-production",
-);
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required. Generate one with: openssl rand -hex 32");
+}
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 const PUBLIC_PATHS = ["/login", "/api/auth/"];
+
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "X-DNS-Prefetch-Control": "off",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+} as const;
+
+function applySecurityHeaders(response: NextResponse): NextResponse {
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    response.headers.set(key, value);
+  }
+  return response;
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
-  // Allow static assets
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
@@ -24,7 +39,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check session JWT
   const token = request.cookies.get("session")?.value;
   if (!token) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -32,9 +46,8 @@ export async function middleware(request: NextRequest) {
 
   try {
     await jwtVerify(token, JWT_SECRET);
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   } catch {
-    // Token expired or invalid
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete("session");
     return response;

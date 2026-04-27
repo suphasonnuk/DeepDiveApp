@@ -1,28 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SignJWT } from "jose";
 
-/**
- * POST /api/auth/login
- *
- * Single-user app: any non-empty passphrase grants a session.
- * The passphrase is used CLIENT-SIDE to derive an AES-256-GCM encryption
- * key (via PBKDF2) that protects sensitive data in IndexedDB.
- * Server-side, we just issue a JWT to gate API access.
- */
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "dev-jwt-secret-change-in-production",
-);
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required. Generate one with: openssl rand -hex 32");
+}
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 const SESSION_DURATION = "1h";
 
-export async function POST(request: NextRequest) {
-  const { passphrase } = await request.json();
+const MAX_PASSPHRASE_LENGTH = 256;
 
-  if (!passphrase || typeof passphrase !== "string") {
+export async function POST(request: NextRequest) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const { passphrase } = body as { passphrase?: unknown };
+
+  if (!passphrase || typeof passphrase !== "string" || passphrase.length > MAX_PASSPHRASE_LENGTH) {
     return NextResponse.json({ error: "Passphrase required" }, { status: 400 });
   }
 
-  // Issue JWT session token
   const token = await new SignJWT({ sub: "owner" })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 60 * 60, // 1 hour
+    maxAge: 60 * 60,
     path: "/",
   });
 

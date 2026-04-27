@@ -3,6 +3,7 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  poweredByHeader: false,
   eslint: { ignoreDuringBuilds: true },
 
   // Required for monorepo standalone builds: trace files from the repo root

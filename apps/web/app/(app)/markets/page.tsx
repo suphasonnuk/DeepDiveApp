@@ -443,7 +443,7 @@ export default function SignalsPage() {
       const tokens: PortfolioToken[] = [port.nativeToken, ...(port.tokens ?? [])]
         .filter((t: PortfolioToken) => t?.symbol && allowedSymbols.has(t.symbol));
       if (!tokens.length) {
-        setScanError("No CMC top-20 tokens found in wallet. Try Quick Scan instead.");
+        setScanError("No CMC top-30 tokens found in wallet. Try Quick Scan instead.");
         return;
       }
       await runScan(tokens, "Portfolio scan");

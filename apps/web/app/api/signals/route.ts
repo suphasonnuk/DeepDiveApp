@@ -2,15 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, autoPositions, and } from "@deepdive/db";
 import { quantSignals } from "@deepdive/db";
 import { desc, eq } from "@deepdive/db";
+import { inArray } from "drizzle-orm";
 
 const QUANT_ENGINE_URL = process.env.QUANT_ENGINE_URL ?? "http://localhost:8000";
+
+const ALLOWED_SYMBOLS = [
+  "BTC", "ETH", "XRP", "BNB", "SOL", "TRX", "DOGE", "BCH", "ADA",
+  "LINK", "XLM", "ZEC", "LTC", "AVAX", "HBAR", "SUI", "SHIB", "TON",
+  "TAO", "WLFI", "UNI", "DOT", "SKY",
+];
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const activeOnly = searchParams.get("active") !== "false";
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "20"), 100);
 
-  const conditions = activeOnly ? eq(quantSignals.isActive, true) : undefined;
+  const conditions = activeOnly
+    ? and(eq(quantSignals.isActive, true), inArray(quantSignals.symbol, ALLOWED_SYMBOLS))
+    : inArray(quantSignals.symbol, ALLOWED_SYMBOLS);
 
   const signals = await db
     .select()
@@ -32,9 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "tokens array required" }, { status: 400 });
   }
 
-  // Call quant engine batch signal generation
   const quantUrl = `${QUANT_ENGINE_URL}/api/v1/signals/batch`;
-  console.log("[signals] calling quant engine:", quantUrl, "tokens:", tokens.map(t => t.symbol));
 
   const quantRes = await fetch(quantUrl, {
     method: "POST",
@@ -46,12 +53,10 @@ export async function POST(request: NextRequest) {
         prices: t.prices,
       })),
     }),
-  }).catch((err) => { console.error("[signals] quant engine fetch error:", err); return null; });
+  }).catch(() => null);
 
   if (!quantRes?.ok) {
-    const body = await quantRes?.text().catch(() => null);
-    console.error("[signals] quant engine error:", quantRes?.status, body);
-    return NextResponse.json({ error: "quant engine unavailable", detail: body, url: quantUrl }, { status: 503 });
+    return NextResponse.json({ error: "quant engine unavailable" }, { status: 503 });
   }
 
   const rawSignals: Record<string, unknown>[] = await quantRes.json();
@@ -129,7 +134,7 @@ export async function POST(request: NextRequest) {
     }).catch(() => null);
 
     if (!posRes?.ok) {
-      console.warn("[signals] auto-position skipped for", signal.symbol, posRes?.status);
+      // Position skipped — no Binance pair or engine error
       continue;
     }
 
@@ -150,7 +155,7 @@ export async function POST(request: NextRequest) {
       slOrderId: posData.sl_order_id,
       status: "open",
       openSlot: 1,  // unique per symbol — DB rejects duplicate open positions for same coin
-    }).catch((err) => console.error("[signals] failed to save position:", err));
+    }).catch(() => {});
   }
 
   return NextResponse.json({ signals: inserted, total: inserted.length });

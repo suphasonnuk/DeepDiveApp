@@ -45,12 +45,10 @@ export async function POST(request: NextRequest) {
       target_price: targetPrice,
       stop_price: stopPrice,
     }),
-  }).catch((err) => { console.error("[positions] open error:", err); return null; });
+  }).catch(() => null);
 
   if (!res?.ok) {
-    const detail = await res?.text().catch(() => "");
-    console.error("[positions] failed:", res?.status, detail);
-    return NextResponse.json({ error: "failed to open position", detail }, { status: 503 });
+    return NextResponse.json({ error: "failed to open position" }, { status: 503 });
   }
 
   const posData = await res.json();
