@@ -7,9 +7,9 @@ import { inArray } from "drizzle-orm";
 const QUANT_ENGINE_URL = process.env.QUANT_ENGINE_URL ?? "http://localhost:8000";
 
 const ALLOWED_SYMBOLS = [
-  "BTC", "ETH", "XRP", "BNB", "SOL", "TRX", "DOGE", "BCH", "ADA",
-  "LINK", "XLM", "ZEC", "LTC", "AVAX", "HBAR", "SUI", "SHIB", "TON",
-  "TAO", "WLFI", "UNI", "DOT", "SKY",
+  "BTC", "ETH", "XRP", "BNB", "SOL", "HYPE", "TRX", "DOGE", "BCH",
+  "ADA", "LINK", "XLM", "ZEC", "LTC", "AVAX", "HBAR", "SUI", "SHIB",
+  "TON", "TAO", "WLFI", "UNI", "DOT", "SKY",
 ];
 
 export async function GET(request: NextRequest) {

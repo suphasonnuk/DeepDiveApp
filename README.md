@@ -15,9 +15,10 @@ See [DEPLOY.md](DEPLOY.md) for the full step-by-step deployment guide.
 
 Signals cover the **CoinMarketCap top-30 non-stablecoin tokens** (filtered to those with Binance USDT spot pairs for reliable OHLCV data):
 
-BTC, ETH, XRP, BNB, SOL, TRX, DOGE, BCH, ADA, LINK, XLM, ZEC, LTC, AVAX, HBAR, SUI, SHIB, TON, TAO, WLFI, UNI, DOT, SKY
+BTC, ETH, XRP, BNB, SOL, HYPE, TRX, DOGE, BCH, ADA, LINK, XLM, ZEC, LTC, AVAX, HBAR, SUI, SHIB, TON, TAO, WLFI, UNI, DOT, SKY
 
-Excluded (no Binance spot pair): HYPE, LEO, XMR, CC, M, CRO, MNT.
+Most use Binance spot for OHLCV data. HYPE uses CoinGecko for historical data + Binance Futures for real-time price.
+Excluded (no data source): LEO, XMR, CC, M, CRO, MNT.
 
 ## Quant Models
 

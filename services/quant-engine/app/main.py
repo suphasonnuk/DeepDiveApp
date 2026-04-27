@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import Optional
 from dotenv import load_dotenv
 
-from app.data.fetchers import fetch_prices, BINANCE_SYMBOL_MAP
+from app.data.fetchers import fetch_prices, BINANCE_SYMBOL_MAP, COINGECKO_ONLY_MAP
 from app.data.funding import avg_funding_rate
 from app.signals.generator import SignalGenerator
 from app.performance.tracker import PaperTradeTracker
@@ -307,7 +307,9 @@ async def _fetch_multi(symbols: list[str], days: int) -> dict[str, np.ndarray]:
 
 
 def _default_symbols() -> list[str]:
-    return [s for s in BINANCE_SYMBOL_MAP if s not in ("WETH", "WBTC")]
+    binance = [s for s in BINANCE_SYMBOL_MAP if s not in ("WETH", "WBTC")]
+    coingecko_only = list(COINGECKO_ONLY_MAP.keys())
+    return binance + coingecko_only
 
 
 @app.post("/api/v1/backtest")

@@ -36,6 +36,7 @@ SYMBOL_MAP: dict[str, str] = {
     "UNI":  "UNIUSDT",
     "DOT":  "DOTUSDT",
     "SKY":  "SKYUSDT",
+    "HYPE": "HYPEUSDT",
 }
 
 
