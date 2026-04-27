@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SignJWT } from "jose";
 
-if (!process.env.JWT_SECRET) {
-  throw new Error("JWT_SECRET environment variable is required. Generate one with: openssl rand -hex 32");
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is required. Generate one with: openssl rand -hex 32");
+  }
+  return new TextEncoder().encode(secret);
 }
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 const SESSION_DURATION = "1h";
 
 const MAX_PASSPHRASE_LENGTH = 256;
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(SESSION_DURATION)
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 
   const response = NextResponse.json({ ok: true });
   response.cookies.set("session", token, {
