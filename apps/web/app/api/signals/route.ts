@@ -55,8 +55,20 @@ export async function POST(request: NextRequest) {
     }),
   }).catch(() => null);
 
-  if (!quantRes?.ok) {
-    return NextResponse.json({ error: "quant engine unavailable" }, { status: 503 });
+  if (!quantRes) {
+    return NextResponse.json(
+      { error: `Cannot connect to quant engine at ${QUANT_ENGINE_URL}` },
+      { status: 503 },
+    );
+  }
+
+  if (!quantRes.ok) {
+    const detail = await quantRes.text().catch(() => "");
+    const status = quantRes.status;
+    return NextResponse.json(
+      { error: `Quant engine returned ${status}${detail ? `: ${detail.slice(0, 200)}` : ""}` },
+      { status: 502 },
+    );
   }
 
   const rawSignals: Record<string, unknown>[] = await quantRes.json();

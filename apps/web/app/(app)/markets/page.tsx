@@ -418,7 +418,10 @@ export default function SignalsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tokens }),
       });
-      if (!res.ok) throw new Error("Signal generation failed — is the quant engine running?");
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error ?? `Signal scan failed (HTTP ${res.status})`);
+      }
       const data = await res.json();
       const count = data.signals?.length ?? 0;
       setScanInfo(`${label}: ${count} signal${count !== 1 ? "s" : ""} generated`);
