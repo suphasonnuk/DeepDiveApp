@@ -63,6 +63,9 @@ COPY --from=builder /app/apps/web/.next/standalone       ./
 COPY --from=builder /app/apps/web/.next/static           ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public                 ./apps/web/public
 
+# Standalone tracer skips serverExternalPackages — install native DB driver explicitly
+RUN npm install --no-save @libsql/client libsql drizzle-orm
+
 EXPOSE 8080
 
 # Run as non-root for security
