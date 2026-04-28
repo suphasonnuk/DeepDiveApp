@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
 
   const balanceUsd = await getPortfolioBalance();
-  const kellyFraction: number = body.positionSizeFraction ?? 0.05;
+  const kellyFraction: number = body.positionSizeFraction || 0.02;
   const leverage: number = body.leverage ?? 1.0;
   const positionSizeUsd = Math.round(balanceUsd * kellyFraction * 100) / 100;
   const marginUsed = Math.round((positionSizeUsd / leverage) * 100) / 100;

@@ -154,8 +154,9 @@ function HeroCard({
 }) {
   const style = SIGNAL_STYLE[signal.signal as keyof typeof SIGNAL_STYLE] ?? SIGNAL_STYLE.HOLD;
   const kelly = signal.kellyFraction ?? 0;
+  const effectiveKelly = Math.max(kelly, 0.02);
   const leverage = signal.suggestedLeverage ?? 1.0;
-  const positionUsd = Math.round(portfolioBalance * kelly * 100) / 100;
+  const positionUsd = Math.round(portfolioBalance * effectiveKelly * 100) / 100;
   const marginUsd = leverage > 0 ? Math.round((positionUsd / leverage) * 100) / 100 : positionUsd;
 
   return (
@@ -175,11 +176,9 @@ function HeroCard({
         </div>
         <div className="text-right shrink-0">
           <p className="font-semibold">{fmt(signal.priceAtSignal)}</p>
-          {kelly > 0 && (
-            <p className="mt-0.5 text-xs text-text-muted">
-              Kelly {(kelly * 100).toFixed(1)}% · <span className="font-medium">${positionUsd.toFixed(2)}</span>
-            </p>
-          )}
+          <p className="mt-0.5 text-xs text-text-muted">
+            {kelly > 0 ? `Kelly ${(kelly * 100).toFixed(1)}%` : "Min 2%"} · <span className="font-medium">${positionUsd.toFixed(2)}</span>
+          </p>
           {leverage > 1 && (
             <p className="text-xs text-text-muted">
               <span className="font-medium text-accent">{leverage}×</span> leverage · ${marginUsd.toFixed(2)} margin
@@ -250,8 +249,9 @@ const SignalCard = memo(function SignalCard({
 }) {
   const style = SIGNAL_STYLE[signal.signal as keyof typeof SIGNAL_STYLE] ?? SIGNAL_STYLE.HOLD;
   const kelly = signal.kellyFraction ?? 0;
+  const effectiveKelly = Math.max(kelly, 0.02);
   const leverage = signal.suggestedLeverage ?? 1.0;
-  const positionUsd = Math.round(portfolioBalance * kelly * 100) / 100;
+  const positionUsd = Math.round(portfolioBalance * effectiveKelly * 100) / 100;
 
   return (
     <div className={`rounded-xl border bg-surface ${style.border}`}>
@@ -307,16 +307,14 @@ const SignalCard = memo(function SignalCard({
                 )}
               </span>
             )}
-            {kelly > 0 && (
-              <span className="ml-auto text-text-muted">
-                Kelly {(kelly * 100).toFixed(1)}%
-                {" · "}
-                <span className="font-medium">${positionUsd.toFixed(2)}</span>
-                {leverage > 1 && (
-                  <span className="text-accent"> {leverage}×</span>
-                )}
-              </span>
-            )}
+            <span className="ml-auto text-text-muted">
+              {kelly > 0 ? `Kelly ${(kelly * 100).toFixed(1)}%` : "Min 2%"}
+              {" · "}
+              <span className="font-medium">${positionUsd.toFixed(2)}</span>
+              {leverage > 1 && (
+                <span className="text-accent"> {leverage}×</span>
+              )}
+            </span>
           </div>
         )}
       </div>
@@ -466,7 +464,7 @@ export default function SignalsPage() {
   async function openBinanceTrade(signal: QuantSignal) {
     if (signal.signal === "HOLD" || !signal.targetPrice || !signal.stopPrice) return;
     setBinanceStatus((s) => ({ ...s, [signal.id]: "opening" }));
-    const kellyFraction = Math.min(signal.kellyFraction ?? 0.05, getKellyCap());
+    const kellyFraction = Math.min(Math.max(signal.kellyFraction ?? 0.02, 0.02), getKellyCap());
     try {
       const res = await fetch("/api/positions", {
         method: "POST",
@@ -491,7 +489,7 @@ export default function SignalsPage() {
 
   async function openPaperTrade(signal: QuantSignal) {
     setPaperTradeStatus((s) => ({ ...s, [signal.id]: "opening" }));
-    const positionSizeFraction = Math.min(signal.kellyFraction ?? 0.05, getKellyCap());
+    const positionSizeFraction = Math.min(Math.max(signal.kellyFraction ?? 0.02, 0.02), getKellyCap());
     const leverage = signal.suggestedLeverage ?? 1.0;
     try {
       const res = await fetch("/api/performance/trades", {
