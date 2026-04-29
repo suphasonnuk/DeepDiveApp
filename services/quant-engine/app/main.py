@@ -1,3 +1,4 @@
+import asyncio
 import os
 import math
 import logging
@@ -11,7 +12,7 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger("quant-engine")
 
-from app.data.fetchers import fetch_prices, BINANCE_SYMBOL_MAP, COINGECKO_ONLY_MAP
+from app.data.fetchers import fetch_prices, fetch_ohlcv_4h, BINANCE_SYMBOL_MAP, COINGECKO_ONLY_MAP
 from app.data.funding import avg_funding_rate
 from app.signals.generator import SignalGenerator
 from app.performance.tracker import PaperTradeTracker
@@ -166,43 +167,58 @@ def health():
 @app.post("/api/v1/signal")
 async def generate_signal(req: SignalRequest):
     if req.prices and len(req.prices) >= 30:
-        prices = np.array(req.prices, dtype=float)
+        prices_4h = np.array(req.prices, dtype=float)
+        prices_daily = prices_4h  # caller-provided, no distinction
         current_price = req.prices[-1]
     else:
-        data = await fetch_prices(req.symbol, req.coingecko_id)
-        if not data["success"]:
-            raise HTTPException(status_code=422, detail=data["reason"])
-        prices = data["prices"]
-        current_price = data["current_price"]
-
-    return _sanitize(signal_generator.generate(req.symbol, prices, float(current_price)))
+        data_4h, data_daily = await asyncio.gather(
+            fetch_ohlcv_4h(req.symbol, req.coingecko_id),
+            fetch_prices(req.symbol, req.coingecko_id),
+        )
+        if not data_4h["success"]:
+            raise HTTPException(status_code=422, detail=data_4h["reason"])
+        prices_4h = data_4h["prices"]
+        if data_daily["success"]:
+            prices_daily = data_daily["prices"]
+        else:
+            # Daily fetch failed — downsample 4H (every 6th bar ≈ daily) so HMM
+            # sees daily-scale volatility rather than noisier 4H returns.
+            prices_daily = prices_4h[::6]
+        current_price = data_4h["current_price"]
+    return _sanitize(signal_generator.generate(req.symbol, prices_4h, prices_daily, float(current_price)))
 
 
 @app.post("/api/v1/signals/batch")
 async def generate_signals_batch(req: BatchSignalRequest):
     results = []
 
-    price_dict: dict[str, np.ndarray] = {}
+    price_dict: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     for token_req in req.tokens:
         try:
             if token_req.prices and len(token_req.prices) >= 30:
-                prices = np.array(token_req.prices, dtype=float)
+                prices_4h = np.array(token_req.prices, dtype=float)
+                prices_daily = prices_4h
+                price_dict[token_req.symbol] = (prices_4h, prices_daily)
             else:
-                data = await fetch_prices(token_req.symbol, token_req.coingecko_id)
-                if not data["success"]:
-                    results.append({"symbol": token_req.symbol, "error": data["reason"], "signal": "HOLD"})
+                data_4h, data_daily = await asyncio.gather(
+                    fetch_ohlcv_4h(token_req.symbol, token_req.coingecko_id),
+                    fetch_prices(token_req.symbol, token_req.coingecko_id),
+                )
+                if not data_4h["success"]:
+                    results.append({"symbol": token_req.symbol, "error": data_4h["reason"], "signal": "HOLD"})
                     continue
-                prices = data["prices"]
-            price_dict[token_req.symbol] = prices
+                prices_4h = data_4h["prices"]
+                prices_daily = data_daily["prices"] if data_daily["success"] else prices_4h[::6]
+                price_dict[token_req.symbol] = (prices_4h, prices_daily)
         except Exception as e:
             results.append({"symbol": token_req.symbol, "error": str(e), "signal": "HOLD"})
 
     proposed_positions: dict[str, float] = {}
 
-    for symbol, prices in price_dict.items():
+    for symbol, (prices_4h, prices_daily) in price_dict.items():
         try:
-            current_price = float(prices[-1])
-            sig = signal_generator.generate(symbol, prices, current_price)
+            current_price = float(prices_4h[-1])
+            sig = signal_generator.generate(symbol, prices_4h, prices_daily, current_price)
             kelly_frac = sig.get("position", {}).get("kelly_fraction", 0.0)
             if sig.get("signal") in ("BUY", "SELL") and kelly_frac > 0:
                 proposed_positions[symbol] = kelly_frac
@@ -212,7 +228,8 @@ async def generate_signals_batch(req: BatchSignalRequest):
 
     try:
         if len(proposed_positions) > 1 and len(price_dict) >= 2:
-            adjusted = portfolio_risk.apply_constraints(proposed_positions, price_dict)
+            prices_only = {s: p4h for s, (p4h, _) in price_dict.items()}
+            adjusted = portfolio_risk.apply_constraints(proposed_positions, prices_only)
             for sig in results:
                 sym = sig.get("symbol")
                 if sym in adjusted and "position" in sig:

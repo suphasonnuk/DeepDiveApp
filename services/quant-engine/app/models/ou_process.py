@@ -69,11 +69,11 @@ class OrnsteinUhlenbeck:
             return 0.0
         return (float(self._spread[-1]) - (self.mu or 0.0)) / self._sigma_eq
 
-    def get_signal(self, prices: np.ndarray) -> dict:
+    def get_signal(self, prices: np.ndarray, dt: float = 1.0) -> dict:
         if len(prices) < 30:
             return {"signal": "HOLD", "confidence": 0.0, "reason": "insufficient data"}
 
-        self.fit(prices)
+        self.fit(prices, dt=dt)
 
         # Reject if not mean-reverting on a tradeable timescale.
         # Upper bound 90d: detrended series reverts faster than raw prices,

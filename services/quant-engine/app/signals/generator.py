@@ -80,18 +80,18 @@ class SignalGenerator:
     def set_funding_rate(self, symbol: str, rate: float) -> None:
         self._avg_funding_rates[symbol] = rate
 
-    def generate(self, symbol: str, prices: np.ndarray, current_price: float) -> dict:
-        if len(prices) < 30:
+    def generate(self, symbol: str, prices_4h: np.ndarray, prices_daily: np.ndarray, current_price: float) -> dict:
+        if len(prices_4h) < 30 or len(prices_daily) < 30:
             return self._no_data(symbol, current_price)
 
         # --- 1. Regime ---
-        regime_info = self.hmm.fit_predict(prices, symbol=symbol)
+        regime_info = self.hmm.fit_predict(prices_daily, symbol=symbol)
         regime = regime_info["regime"]
         weights = REGIME_WEIGHTS.get(regime, REGIME_WEIGHTS["SIDEWAYS"])
 
         # --- 2. Model signals ---
-        kalman_sig = self.kalman.get_signal(prices)
-        ou_sig = self.ou.get_signal(prices)
+        kalman_sig = self.kalman.get_signal(prices_4h)
+        ou_sig = self.ou.get_signal(prices_4h, dt=4/24)
 
         # --- 3. Weighted score combination ---
         k_score = _SIGNAL_SCORE.get(kalman_sig["signal"], 0) * kalman_sig["confidence"]
